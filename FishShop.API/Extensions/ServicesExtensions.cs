@@ -50,7 +50,7 @@ public static class ServicesExtensions
                 options.AddPolicy("AllowSpecificOrigin",
                     policy =>
                     {
-                        policy.WithOrigins("http://thefishsouq-hth4bdcjg0eteha3.uaenorth-01.azurewebsites.net").AllowAnyMethod().AllowAnyHeader()
+                        policy.WithOrigins("https://thefishsouq.vercel.app").AllowAnyMethod().AllowAnyHeader()
                             .AllowCredentials();
                     });
             })
