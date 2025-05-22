@@ -19,10 +19,10 @@ if (builder.Environment.IsDevelopment())
 }
 
 builder.Configuration.AddEnvironmentVariables();
-if (builder.Environment.IsDevelopment()) 
-{
-    builder.Configuration.AddUserSecrets<Program>();
-}
+// if (builder.Environment.IsDevelopment()) 
+// {
+//     builder.Configuration.AddUserSecrets<Program>();
+// }
 
 builder.ConfigureLogging();
 
