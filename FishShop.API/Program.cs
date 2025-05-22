@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy => 
         policy
-            .WithOrigins("https://thefishsouq-hth4bdcjg0eteha3.uaenorth-01.azurewebsites.net") // Angular dev server
+            .WithOrigins("https://thefishsouq.vercel.app") // Angular dev server
             .AllowAnyMethod()
             .AllowAnyHeader()
     );
