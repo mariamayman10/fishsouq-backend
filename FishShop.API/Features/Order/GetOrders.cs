@@ -82,11 +82,16 @@ public static class GetOrders
                 return Result.BadRequest<PagedResult<OrderOverview>>(validationResult.ToString());
             }
 
-            var transaction = await dbContext.Database.GetDbConnection()
-                .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+            // var transaction = await dbContext.Database.GetDbConnection()
+            //     .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+            // var connection = dbContext.Database.GetDbConnection();
+            // if (connection.State != ConnectionState.Open)
+            //     await connection.OpenAsync(cancellationToken);
+            //
+            // var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
 
-            var query = dbContext.Orders.AsQueryable();
+            var query = dbContext.Orders.Include(o => o.User).AsQueryable();
 
             // Apply filters
             if (request.FromCreatedAt.HasValue)
@@ -133,7 +138,14 @@ public static class GetOrders
                     DeliveryDate = o.DeliveryDate,
                     DeliveryType = o.DeliveryType,
                     Status = o.Status,
-                    TotalPrice = o.TotalPrice
+                    TotalPrice = o.TotalPrice,
+                    UserName = o.User.UserName,
+                    DeliveryAddress = o.AddressId, // or any desired projection
+                    Products = o.Products.Select(p => new {
+                        p.ProductId,
+                        p.Quantity,
+                        p.UnitPrice
+                    }).ToList()
                 })
                 .ToListAsync(cancellationToken);
 
@@ -171,7 +183,7 @@ public class GetOrdersEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization()
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("GetOrders")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

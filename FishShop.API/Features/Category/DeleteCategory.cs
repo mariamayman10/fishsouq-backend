@@ -89,7 +89,7 @@ public class DeleteCategoryEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("DeleteCategory")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

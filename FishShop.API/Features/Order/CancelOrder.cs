@@ -26,10 +26,7 @@ public static class CancelOrder
             RuleFor(x => x.Id)
                 .GreaterThan(-1)
                 .WithMessage("Invalid order ID");
-
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("User ID is required");
+            
         }
     }
 
@@ -60,7 +57,7 @@ public static class CancelOrder
                 return Result.NotFound("Order not found");
             }
 
-            if (order.Status != OrderStatus.OutForDelivery)
+            if (order.Status != OrderStatus.Pending)
             {
                 logger.LogWarning("Cannot cancel order in status {Status}", order.Status);
                 return Result.BadRequest("Order cannot be cancelled in its current status");
@@ -97,8 +94,7 @@ public class CancelOrderEndpoint : ICarterModule
                 var result = await sender.Send(command);
 
                 return result.Resolve();
-            })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            }).RequireAuthorization()
             .WithName("CancelOrder")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

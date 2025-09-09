@@ -76,6 +76,9 @@ public static class SecurityExtensions
     {
         services.AddAuthorization(options =>
         {
+            options.AddPolicy(PolicyConstants.ManagerPolicy, policy =>
+                policy.RequireRole(RolesConstants.ManagerRole));
+            
             options.AddPolicy(PolicyConstants.AdminPolicy, policy =>
                 policy.RequireRole(RolesConstants.AdminRole));
 

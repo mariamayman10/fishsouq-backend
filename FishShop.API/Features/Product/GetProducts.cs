@@ -100,7 +100,7 @@ public static class GetProducts
                 .FirstAsync(cancellationToken);
 
             var rawQuery = $"""
-                            SELECT p."Id", p."Quantity", p."Name", p."Price", p."Description"
+                            SELECT p."Id", p."Quantity", p."Name", p."Price", p."Description", p."ImageUrl"
                             FROM "Products" AS p
                             LEFT JOIN "ProductSales" AS ps ON p."Id" = ps."ProductId"
                             WHERE p."Quantity" > 0 AND p."IsDeleted" = FALSE
@@ -136,13 +136,21 @@ public static class GetProducts
 
             var totalItems = await query.CountAsync(cancellationToken);
 
+            // query = request.OrderBy switch
+            // {
+            //     OrderBy.PriceAsc => query.OrderBy(p => p.Price).ThenBy(p => p.Id),
+            //     OrderBy.PriceDesc => query.OrderByDescending(p => p.Price).ThenBy(p => p.Id),
+            //     OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales!.TotalQuantitySold).ThenBy(p => p.Id),
+            //     OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales!.TotalQuantitySold)
+            //         .ThenBy(p => p.Id),
+            //     _ => throw new ArgumentOutOfRangeException()
+            // };
             query = request.OrderBy switch
             {
-                OrderBy.PriceAsc => query.OrderBy(p => p.Price).ThenBy(p => p.Id),
-                OrderBy.PriceDesc => query.OrderByDescending(p => p.Price).ThenBy(p => p.Id),
-                OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales!.TotalQuantitySold).ThenBy(p => p.Id),
-                OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales!.TotalQuantitySold)
-                    .ThenBy(p => p.Id),
+                OrderBy.PriceAsc => query.OrderBy(p => p.Price),
+                OrderBy.PriceDesc => query.OrderByDescending(p => p.Price),
+                OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
+                OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -156,10 +164,11 @@ public static class GetProducts
                     Name = p.Name!,
                     Price = p.Price,
                     Quantity = p.Quantity,
-                    Description = p.Description
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl
                 })
                 .ToListAsync(cancellationToken);
-
+            logger.LogInformation("Fetched {items} products", items.Count);
             var pagedResult = new PagedResult<Product>
             {
                 Items = items,

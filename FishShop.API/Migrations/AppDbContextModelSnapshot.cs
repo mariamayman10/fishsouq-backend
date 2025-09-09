@@ -22,6 +22,37 @@ namespace FishShop.API.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("FishShop.API.Entities.AdminPrivileges", b =>
+                {
+                    b.Property<string>("AdminId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("CanAddCategory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanAddProduct")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanDeleteCategory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanDeleteProduct")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanUpdateCategory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanUpdateOrderStatus")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanUpdateProduct")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("AdminId");
+
+                    b.ToTable("AdminPrivileges");
+                });
+
             modelBuilder.Entity("FishShop.API.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -67,8 +98,21 @@ namespace FishShop.API.Migrations
                     b.Property<DateTime>("DeliveryDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("DeliveryFees")
+                        .HasColumnType("integer");
+
                     b.Property<int>("DeliveryType")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PaymentInfo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PromoCode")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -169,6 +213,55 @@ namespace FishShop.API.Migrations
                     b.HasKey("ProductId");
 
                     b.ToTable("ProductSales");
+                });
+
+            modelBuilder.Entity("FishShop.API.Entities.PromoCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DiscountType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("TimesUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("PromoCodes");
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.RefreshToken", b =>
@@ -451,6 +544,17 @@ namespace FishShop.API.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("FishShop.API.Entities.AdminPrivileges", b =>
+                {
+                    b.HasOne("FishShop.API.Entities.User", "Admin")
+                        .WithOne()
+                        .HasForeignKey("FishShop.API.Entities.AdminPrivileges", "AdminId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.Order", b =>

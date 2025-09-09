@@ -19,8 +19,11 @@ public static class SubmitOrder
         public string? UserId { get; init; }
         public List<CreateOrderItem>? Items { get; init; }
         public DeliveryType DeliveryType { get; init; }
-        public DateTime DeliveryDate { get; init; }
         public string? AddressId { get; init; }
+        public string? PaymentInfo { get; init; }
+        public decimal Discount { get; init; }
+        public int DeliveryFees { get; init; }
+        public string PromoCode { get; init; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -46,10 +49,11 @@ public static class SubmitOrder
                         .GreaterThan(-1)
                         .WithMessage("Quantity must be greater than 0");
                 });
-
-            RuleFor(x => x.DeliveryDate)
-                .GreaterThan(DateTime.UtcNow)
-                .WithMessage("Delivery date must be in the future");
+            
+            RuleFor(x => x.PaymentInfo)
+                .NotEmpty()
+                .When(x => x.DeliveryType != DeliveryType.PickUp)
+                .WithMessage("Payment information is required for deliveries");
         }
     }
 
@@ -58,11 +62,20 @@ public static class SubmitOrder
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
             var userId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var role = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Role); // ← GET the role claim
+
             if (string.IsNullOrEmpty(userId))
             {
-                
                 logger.LogWarning("User ID not found in claims");
                 return Result.BadRequest<int>("Unauthorized access: user ID not found");
+            }
+
+            logger.LogInformation("User {UserId} with role {Role} attempting to submit order", userId, role);
+
+            if (role == "ManagerRole" || role == "AdminRole")
+            {
+                logger.LogWarning("User {UserId} with role {Role} is not allowed to submit orders", userId, role);
+                return Result.BadRequest<int>("Manager and Admins are not allowed to submit orders");
             }
             logger.LogInformation("Attempting to submit order for user {UserId} with {ItemCount} items",
                 request.UserId, request.Items!.Count);
@@ -90,25 +103,36 @@ public static class SubmitOrder
                     logger.LogWarning("Product {ProductId} not found or is deleted", item.ProductId);
                     return Result.NotFound<int>($"Product {item.ProductId} not found");
                 }
-
-                if (products[item.ProductId].Quantity < item.Quantity)
-                {
-                    logger.LogWarning(
-                        "Insufficient stock for product {ProductId}. Requested: {Requested}, Available: {Available}",
-                        item.ProductId, item.Quantity, products[item.ProductId].Quantity);
-                    return Result.BadRequest<int>($"Insufficient stock for product {item.ProductId}");
-                }
             }
+            if (!string.IsNullOrWhiteSpace(request.PromoCode))
+            {
+                var promo = await dbContext.PromoCodes
+                    .FirstOrDefaultAsync(p => p.Code == request.PromoCode && p.IsActive, cancellationToken);
 
+                if (promo is null)
+                {
+                    logger.LogWarning("Promo code {PromoCode} not found or inactive", request.PromoCode);
+                    return Result.NotFound<int>($"Promo code {request.PromoCode} not found or inactive");
+                }
+
+                promo.TimesUsed++;
+                dbContext.PromoCodes.Update(promo);
+            }
+            
+            decimal totalPrice = request.Items.Sum(i => i.Quantity * products[i.ProductId].Price);
+            
             var order = new Order
             {
                 UserId = request.UserId,
                 AddressId = request.AddressId != null? request.AddressId: "",
                 CreatedAt = DateTime.UtcNow,
                 DeliveryType = request.DeliveryType,
-                TotalPrice = request.Items.Sum(i => i.Quantity * products[i.ProductId].Price),
+                DeliveryFees = request.DeliveryFees,
+                Discount = request.Discount,
+                TotalPrice = totalPrice + request.DeliveryFees - request.Discount,
                 Status = OrderStatus.Pending,
-                DeliveryDate = request.DeliveryDate,
+                PaymentInfo = request.PaymentInfo,
+                PromoCode = request.PromoCode,
                 Products = request.Items.Select(i => new OrderProduct
                 {
                     ProductId = i.ProductId,
@@ -116,13 +140,6 @@ public static class SubmitOrder
                     UnitPrice = products[i.ProductId].Price
                 }).ToList()
             };
-
-            // Update product quantities
-            foreach (var item in request.Items)
-            {
-                var product = await dbContext.Products.FindAsync(item.ProductId);
-                product!.Quantity -= item.Quantity;
-            }
 
             dbContext.Orders.Add(order);
 
@@ -162,7 +179,10 @@ public class SubmitOrderEndpoint : ICarterModule
                     AddressId = request.AddressId,
                     Items = request.Items,
                     DeliveryType = request.DeliveryType,
-                    DeliveryDate = request.DeliveryDate,
+                    PaymentInfo = request.PaymentInfo,
+                    Discount = request.Discount,
+                    DeliveryFees = request.DeliveryFees,
+                    PromoCode = request.PromoCode
                 };
 
                 var result = await sender.Send(command);

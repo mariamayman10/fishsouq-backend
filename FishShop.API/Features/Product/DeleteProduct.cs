@@ -91,7 +91,7 @@ public class DeleteProductEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("DeleteProduct")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

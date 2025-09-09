@@ -68,7 +68,7 @@ public class EmailSender : IEmailSender<User>
                 <html>
                     <body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;'>
                         <div style='background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-                            <h2 style='color: #333; margin-bottom: 20px;'>Welcome to FishShop! 🐠</h2>
+                            <h2 style='color: #333; margin-bottom: 20px;'>Welcome to FishSouq! 🐠</h2>
                             <p style='color: #666; line-height: 1.5;'>Please confirm your email address by clicking the button below:</p>
                             <div style='text-align: center; margin: 30px 0;'>
                                 <a href='{confirmationLink}' 
@@ -85,7 +85,7 @@ public class EmailSender : IEmailSender<User>
                             </div>
                             <p style='color: #666; line-height: 1.5;'>If you didn't create an account, you can safely ignore this email.</p>
                             <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
-                            <p style='color: #666; margin-bottom: 0;'>Best regards,<br><strong>The FishShop Team</strong></p>
+                            <p style='color: #666; margin-bottom: 0;'>Best regards,<br><strong>The FishSouq Team</strong></p>
                         </div>
                     </body>
                 </html>";

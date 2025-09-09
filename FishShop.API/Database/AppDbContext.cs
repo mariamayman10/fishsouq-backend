@@ -21,6 +21,9 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<ProductSales> ProductSales { get; init; }
     public DbSet<RefreshToken> RefreshTokens { get; init; }
     public DbSet<UserAddress> UserAddresses { get; init; }
+    public DbSet<AdminPrivileges> AdminPrivileges { get; init; }
+    public DbSet<PromoCode> PromoCodes { get; init; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +36,8 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         modelBuilder.ApplyConfiguration(new UserAddressConfiguration());
+        modelBuilder.ApplyConfiguration(new AdminPrivilegesConfiguration());
+        modelBuilder.ApplyConfiguration(new PromoCodeConfiguration());
     }
 
     public override int SaveChanges()

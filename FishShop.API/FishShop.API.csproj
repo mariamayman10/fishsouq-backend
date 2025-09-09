@@ -63,7 +63,44 @@
 
 
     <ItemGroup>
-        <Folder Include="Features\UserAddress\"/>
+        <Folder Include="wwwroot\" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Amberjack Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Black Mullet.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Blue Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Blue Male Crab.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Brown Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Calamari.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Caramote Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Dusky Grouper.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Female Crab.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\King Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Lambouka.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Lizard Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\New Product.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Neww.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Obtuse Barracuda.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Octopus.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Pompano Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Porgy.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Red Mullet.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Red Seabream.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sand Steenbars.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sardines.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sargo.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Seabass.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Seabream.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sigan Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sole Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Spottail Maintis Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Squids.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Umbrina cirrosa.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\White Grouper.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\White Shrimps.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Yellowfin Grouper.jpg" />
     </ItemGroup>
 
 </Project>

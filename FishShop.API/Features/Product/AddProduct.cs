@@ -14,12 +14,12 @@ public static class AddProduct
 {
     public record Command : IRequest<Result<int>>
     {
-        public string? Name { get; set; }
-        public decimal Price { get; set; }
-        public int Quantity { get; set; }
-        public string? Description { get; set; }
-        public int CategoryId { get; set; }
-        public string ImageUrl { get; set; }
+        public required string? Name { get; set; }
+        public required decimal Price { get; set; }
+        public required int Quantity { get; set; }
+        public required string? Description { get; set; }
+        public required int CategoryId { get; set; }
+        public required string ImageUrl { get; set; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -49,10 +49,6 @@ public static class AddProduct
             RuleFor(x => x.CategoryId)
                 .GreaterThan(-1)
                 .WithMessage("Invalid category ID");
-
-            RuleFor(x => x.ImageUrl)
-                .NotEmpty()
-                .WithMessage("ImageUrl is required");
         }
     }
 
@@ -137,7 +133,7 @@ public class AddProductEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)            
             .WithName("AddProduct")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

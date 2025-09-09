@@ -109,7 +109,7 @@ public class UpdateCategoryEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("UpdateCategory")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

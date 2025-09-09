@@ -1,42 +1,33 @@
+using Carter;
 using FishShop.API.Extensions;
+using FishShop.API.Shared;
+using Microsoft.AspNetCore.Mvc;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    ContentRootPath = Directory.GetCurrentDirectory(),
-    EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environments.Production
-});
-
-// ✅ Load configs: base, environment, secrets, environment variables
-builder.Configuration
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsDevelopment()) 
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-builder.Configuration.AddEnvironmentVariables();
-// if (builder.Environment.IsDevelopment()) 
-// {
-//     builder.Configuration.AddUserSecrets<Program>();
-// }
-
 builder.ConfigureLogging();
 
 builder.Services.AddRequiredServices(builder.Configuration, builder.Environment);
-
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(PolicyConstants.ManagerOrAdminPolicy, policy =>
+        policy.RequireRole(RolesConstants.ManagerRole, RolesConstants.AdminRole));
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy => 
         policy
-            .WithOrigins("https://thefishsouq.vercel.app") // Angular dev server
+            .WithOrigins("http://localhost:4200") // Angular dev server
             .AllowAnyMethod()
             .AllowAnyHeader()
     );
 });
+
 
 var app = builder.Build();
 
@@ -44,7 +35,7 @@ var app = builder.Build();
 app.UseCors("AllowAngularDev");
 
 // var app = builder.Build();
-
+app.UseSwagger();
+app.UseSwaggerUI();
 app.AddRequiredMiddlewares();
-
 app.Run();

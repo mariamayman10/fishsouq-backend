@@ -49,7 +49,8 @@ public static class GetProduct
                     Description = p.Description,
                     Quantity = p.Quantity,
                     CategoryId = p.CategoryId,
-                    Price = p.Price
+                    Price = p.Price,
+                    ImageUrl = p.ImageUrl
                 }).SingleOrDefault();
 
             if (product is null)

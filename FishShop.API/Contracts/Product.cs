@@ -7,4 +7,5 @@ public record Product
     public decimal Price { get; init; }
     public decimal Quantity { get; init; }
     public string? Description { get; init; }
+    public string ImageUrl { get; init; }
 }

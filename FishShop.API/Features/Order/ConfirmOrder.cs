@@ -7,16 +7,14 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FishShop.Application.Features;
-
+namespace FishShop.API.Features;
+public record Command : IRequest<Result>
+{
+    public int Id { get; init; }
+    public string UserId { get; init; }
+}
 public static class ConfirmOrder
 {
-    public record Command : IRequest<Result>
-    {
-        public int Id { get; init; }
-        public string UserId { get; init; }
-    }
-
     public class Validator : AbstractValidator<Command>
     {
         public Validator()
@@ -24,10 +22,6 @@ public static class ConfirmOrder
             RuleFor(x => x.Id)
                 .GreaterThan(-1)
                 .WithMessage("Invalid order ID");
-
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("User ID is required");
         }
     }
 
@@ -61,7 +55,7 @@ public static class ConfirmOrder
 
             if (order.Status != OrderStatus.Pending)
             {
-                logger.LogWarning("Invalid order status transition from {CurrentStatus} for order {OrderId}",
+                logger.LogWarning("Invalid order status transition zz from {CurrentStatus} for order {OrderId}",
                     order.Status, request.Id);
                 return Result.BadRequest("Order cannot be confirmed from its current status");
             }
@@ -71,7 +65,7 @@ public static class ConfirmOrder
                 : OrderStatus.AwaitingCustomer;
 
             await dbContext.SaveChangesAsync(cancellationToken);
-
+            await transaction.CommitAsync(cancellationToken);
 
             logger.LogInformation("Successfully confirmed order {OrderId} with status {Status}",
                 request.Id, order.Status);
@@ -79,28 +73,23 @@ public static class ConfirmOrder
         }
     }
 
-    public class ConfirmOrderEndpoint : ICarterModule
+    
+}
+public class ConfirmOrderEndpoint : ICarterModule
+{
+    public void AddRoutes(IEndpointRouteBuilder app)
     {
-        public void AddRoutes(IEndpointRouteBuilder app)
+        app.MapPost("api/orders/{orderId}/confirm", async (
+            int orderId,
+            ISender sender,
+            ClaimsPrincipal user,
+            ILogger<ConfirmOrderEndpoint> logger) =>
         {
-            app.MapPost("api/orders/{orderId}/confirm", async (
-                int orderId,
-                ISender sender,
-                ClaimsPrincipal user,
-                ILogger<ConfirmOrderEndpoint> logger) =>
-            {
-                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    logger.LogWarning("User ID not found in claims");
-                    return Results.Unauthorized();
-                }
 
-                var command = new Command { Id = orderId, UserId = userId };
-                var result = await sender.Send(command);
+            var command = new Command { Id = orderId, UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) };
+            var result = await sender.Send(command);
 
-                return result.Resolve();
-            }).RequireAuthorization(PolicyConstants.AdminPolicy);
-        }
+            return result.Resolve();
+        }).RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy);
     }
 }

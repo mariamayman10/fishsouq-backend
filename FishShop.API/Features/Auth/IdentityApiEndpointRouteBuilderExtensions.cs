@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using FishShop.API.Database;
 using FishShop.API.Shared;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RegisterRequest = FishShop.API.Contracts.RegisterRequest;
 
@@ -67,7 +69,8 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             var emailStore = (IUserEmailStore<TUser>)userStore;
             var email = registration.Email;
             var name = registration.Name;
-            
+
+
             if (string.IsNullOrEmpty(email) || !_emailAddressAttribute.IsValid(email))
                 return CreateValidationProblem(IdentityResult.Failed(userManager.ErrorDescriber.InvalidEmail(email)));
 
@@ -75,7 +78,7 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             await userManager.SetPhoneNumberAsync(user, registration.PhoneNumber);
             await userStore.SetUserNameAsync(user, email, CancellationToken.None);
             await emailStore.SetEmailAsync(user, email, CancellationToken.None);
-            
+
 
             var claims = new List<Claim>
             {
@@ -97,11 +100,17 @@ public static class IdentityApiEndpointRouteBuilderExtensions
 
         // Updated Login endpoint in IdentityApiEndpointRouteBuilderExtensions.cs
         routeGroup.MapPost("/login", async Task<Results<Ok<AccessTokenResponse>, EmptyHttpResult, ProblemHttpResult>>
-        ([FromBody] LoginRequest login, [FromQuery] bool? useCookies, [FromQuery] bool? useSessionCookies,
-            [FromServices] IServiceProvider sp, IConfiguration configuration) =>
+        (
+            [FromBody] LoginRequest login,
+            [FromQuery] bool? useCookies,
+            [FromQuery] bool? useSessionCookies,
+            [FromServices] IServiceProvider sp,
+            IConfiguration configuration
+        ) =>
         {
             var signInManager = sp.GetRequiredService<SignInManager<TUser>>();
             var userManager = sp.GetRequiredService<UserManager<TUser>>();
+            var dbContext = sp.GetRequiredService<AppDbContext>();
 
             var user = await userManager.FindByEmailAsync(login.Email);
             if (user == null)
@@ -113,18 +122,34 @@ public static class IdentityApiEndpointRouteBuilderExtensions
 
             var jwtSettings = configuration.GetSection("JWT");
 
-            // Get the principal so we can extract claims, including the user's real name
+            // Base claims from Identity
             var principal = await signInManager.CreateUserPrincipalAsync(user);
-            var nameClaim = principal.FindFirst("DisplayName");
-            var claims = new List<Claim>
+            var claims = principal.Claims.ToList();
+
+            var adminId = await userManager.GetUserIdAsync(user);
+            var row = await dbContext.AdminPrivileges
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.AdminId == adminId);
+
+            if (row is not null) // means user is an admin
             {
-                new(ClaimTypes.NameIdentifier, await userManager.GetUserIdAsync(user)),
-                new(ClaimTypes.Email, await userManager.GetEmailAsync(user) ?? string.Empty),
-                new(ClaimTypes.Name, nameClaim?.Value ?? string.Empty) 
-            };
+                void AddIfTrue(string name, bool flag)
+                {
+                    if (flag) claims.Add(new Claim("Privilege", name));
+                }
+
+                AddIfTrue("CanAddProduct", row.CanAddProduct);
+                AddIfTrue("CanAddCategory", row.CanAddCategory);
+                AddIfTrue("CanUpdateProduct", row.CanUpdateProduct);
+                AddIfTrue("CanUpdateCategory", row.CanUpdateCategory);
+                AddIfTrue("CanDeleteProduct", row.CanDeleteProduct);
+                AddIfTrue("CanDeleteCategory", row.CanDeleteCategory);
+                AddIfTrue("CanUpdateOrderStatus", row.CanUpdateOrderStatus);
+            }
+
             var (jwt, expires) = TokenGenerator.GenerateJwtToken(jwtSettings, claims);
 
-            // Generate refresh token
+            // Refresh token (uses the Identity principal)
             var refreshTokenProtector = bearerTokenOptions.Get(IdentityConstants.BearerScheme).RefreshTokenProtector;
             var refreshToken = TokenGenerator.GenerateRefreshToken(refreshTokenProtector, principal, timeProvider);
 

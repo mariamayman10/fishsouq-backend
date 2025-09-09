@@ -14,7 +14,7 @@ public static class AddCategory
 {
     public record Command : IRequest<Result<string>>
     {
-        public string? Name { get; }
+        public string? Name { get; set; }
     }
 
     private class Validator : AbstractValidator<Command>
@@ -91,7 +91,7 @@ public class AddCategoryEndpoint : ICarterModule
 
                 return result.Resolve();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("AddCategory")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

@@ -180,7 +180,7 @@ public class UpdateProductEndpoint : ICarterModule
 
                 return Results.NoContent();
             })
-            .RequireAuthorization(PolicyConstants.AdminPolicy)
+            .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("UpdateProduct")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {

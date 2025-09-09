@@ -14,7 +14,7 @@ public static class GetOrderDetails
     public record Query : IRequest<Result<OrderDetails>>
     {
         public int Id { get; init; }
-        public string? UserId { get; init; }
+        public ClaimsPrincipal User { get; init; } = default!;
     }
 
     public class Validator : AbstractValidator<Query>
@@ -32,9 +32,11 @@ public static class GetOrderDetails
     {
         public async Task<Result<OrderDetails>> Handle(Query request, CancellationToken cancellationToken)
         {
-            logger.LogInformation("Retrieving order details for OrderId: {OrderId}, UserId: {UserId}",
-                request.Id, request.UserId);
+            var userId = request.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdminOrManager = request.User.FindFirstValue(ClaimTypes.Role) == "AdminRole" || request.User.FindFirstValue(ClaimTypes.Role) == "ManagerRole";
 
+            logger.LogInformation("Retrieving order details for OrderId: {OrderId}, RequestedBy: {UserId}, IsAdmin: {IsAdmin}",
+                request.Id, userId, isAdminOrManager);
 
             var validator = new Validator();
             var validationResult = await validator.ValidateAsync(request, cancellationToken);
@@ -44,42 +46,44 @@ public static class GetOrderDetails
                 return Result.BadRequest<OrderDetails>(validationResult.ToString());
             }
 
+            var order = await dbContext.Orders
+                .Where(o => o.Id == request.Id)
+                .Include(o => o.Products!)
+                    .ThenInclude(op => op.Product)
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            var orderProducts = await dbContext.Orders
-                .Where(o => o.Id == request.Id && o.UserId == request.UserId)
-                .SelectMany(o => o.Products!)
-                .Select(o=> new
-                {
-                    ProductName = o.Product!.Name,
-                    o.ProductId,
-                    o.Quantity,
-                    o.UnitPrice,
-                    o.Order!.User!.UserName,
-                    o.Order.AddressId,
-                    o.Order.CreatedAt,
-                    o.Order.Status
-                })
-                .ToListAsync(cancellationToken);
-
-            if (orderProducts.Count == 0)
+            if (order == null)
             {
                 logger.LogWarning("Order not found for OrderId: {OrderId}", request.Id);
                 return Result.NotFound<OrderDetails>("No order with the provided Id");
             }
 
+            if (order.UserId != userId && !isAdminOrManager)
+            {
+                logger.LogWarning("Unauthorized access attempt to OrderId: {OrderId} by UserId: {UserId}", request.Id, userId);
+                return Result.NotFound<OrderDetails>("You are not authorized to access this order");
+            }
+
             var orderDetails = new OrderDetails
             {
-                Id = request.Id,
-                AddressId = orderProducts.First().AddressId,
-                TotalAmount = orderProducts.Sum(o => o.UnitPrice * o.Quantity),
-                UserName = orderProducts.First().UserName!,
-                CreatedAt = orderProducts.First().CreatedAt,
-                Status = orderProducts.First().Status,
-                Items = orderProducts.Select(i => new OrderItem
+                Id = order.Id,
+                AddressId = order.AddressId,
+                TotalAmount = order.Products.Sum(p => p.UnitPrice * p.Quantity),
+                UserName = order.User?.UserName ?? "",
+                UserId = order.UserId,
+                CreatedAt = order.CreatedAt,
+                DeliveryDate = order.DeliveryDate,
+                DeliveryFees = order.DeliveryFees,
+                Status = order.Status,
+                PaymentInfo = order.PaymentInfo,
+                Discount = order.Discount,
+                PromoCode = order.PromoCode,
+                Items = order.Products.Select(p => new OrderItem
                 {
-                    ProductId = i.ProductId,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
+                    ProductId = p.ProductId,
+                    Quantity = p.Quantity,
+                    UnitPrice = p.UnitPrice
                 }).ToList()
             };
 
@@ -95,9 +99,9 @@ public class GetOrderDetailsEndpoint : ICarterModule
     {
         app.MapGet("api/orders/{orderId}", async (
             int orderId,
+            ClaimsPrincipal user,
             ISender sender,
-            ILogger<GetOrderDetailsEndpoint> logger,
-            ClaimsPrincipal user) =>
+            ILogger<GetOrderDetailsEndpoint> logger) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
@@ -105,15 +109,13 @@ public class GetOrderDetailsEndpoint : ICarterModule
                 logger.LogWarning("User ID not found in claims");
                 return Results.Unauthorized();
             }
-
             var query = new GetOrderDetails.Query
             {
                 Id = orderId,
-                UserId = userId
+                User = user
             };
 
             var result = await sender.Send(query);
-
             return result.Resolve();
         }).RequireAuthorization();
     }

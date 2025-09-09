@@ -12,5 +12,8 @@ public enum OrderBy
     DeliveryDateAsc,
 
     CreatedAtDesc,
-    CreatedAtAsc
+    CreatedAtAsc,
+    
+    AvQuantityAsc,
+    AvQuantityDesc,
 }
