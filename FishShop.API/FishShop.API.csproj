@@ -1,0 +1,106 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <UserSecretsId>54c7ad59-3713-4be9-b477-5bb6ea842482</UserSecretsId>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MailKit" Version="4.11.0"/>
+        <PackageReference Include="Mapster" Version="7.4.0"/>
+        <PackageReference Include="MimeKit" Version="4.11.0"/>
+        <PackageReference Include="OpenTelemetry" Version="1.11.2"/>
+        <PackageReference Include="OpenTelemetry.Api" Version="1.11.2"/>
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2"/>
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.3"/>
+
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.3">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.3"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4"/>
+
+        <PackageReference Include="FluentValidation" Version="11.11.0"/>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0"/>
+
+        <PackageReference Include="MediatR" Version="12.4.1"/>
+
+        <PackageReference Include="Carter" Version="8.1.0"/>
+
+        <PackageReference Include="Serilog" Version="4.2.0"/>
+        <PackageReference Include="Serilog.AspNetCore" Version="9.0.0"/>
+        <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1"/>
+        <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0"/>
+        <PackageReference Include="Serilog.Exceptions" Version="8.4.0"/>
+        <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0"/>
+        <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0"/>
+        <PackageReference Include="Serilog.Sinks.OpenTelemetry" Version="4.1.1"/>
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Folder Include="wwwroot\" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Amberjack Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Black Mullet.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Blue Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Blue Male Crab.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Brown Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Calamari.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Caramote Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Dusky Grouper.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Female Crab.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\King Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Lambouka.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Lizard Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\New Product.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Neww.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Obtuse Barracuda.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Octopus.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Pompano Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Porgy.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Red Mullet.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Red Seabream.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sand Steenbars.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sardines.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sargo.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Seabass.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Seabream.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sigan Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Sole Fish.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Spottail Maintis Shrimp.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Squids.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Umbrina cirrosa.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\White Grouper.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\White Shrimps.jpg" />
+      <_ContentIncludedByDefault Remove="wwwroot\images\products\Yellowfin Grouper.jpg" />
+    </ItemGroup>
+
+</Project>
