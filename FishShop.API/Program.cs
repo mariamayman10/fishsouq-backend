@@ -22,7 +22,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy => 
         policy
-            .WithOrigins("http://localhost:4200") // Angular dev server
+            .WithOrigins("https://thefishsouq.vercel.app") // Angular dev server
             .AllowAnyMethod()
             .AllowAnyHeader()
     );
