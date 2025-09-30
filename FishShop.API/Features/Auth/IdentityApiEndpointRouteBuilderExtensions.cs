@@ -57,7 +57,11 @@ public static class IdentityApiEndpointRouteBuilderExtensions
         // NOTE: We cannot inject UserManager<TUser> directly because the TUser generic parameter is currently unsupported by RDG.
         // https://github.com/dotnet/aspnetcore/issues/47338
         routeGroup.MapPost("/register", async Task<Results<Ok, ValidationProblem>>
-            ([FromBody] RegisterRequest registration, HttpContext context, [FromServices] IServiceProvider sp) =>
+        (
+            [FromBody] RegisterRequest registration,
+            HttpContext context,
+            [FromServices] IServiceProvider sp
+        ) =>
         {
             var userManager = sp.GetRequiredService<UserManager<TUser>>();
 
@@ -70,24 +74,34 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             var email = registration.Email;
             var name = registration.Name;
 
-
             if (string.IsNullOrEmpty(email) || !_emailAddressAttribute.IsValid(email))
-                return CreateValidationProblem(IdentityResult.Failed(userManager.ErrorDescriber.InvalidEmail(email)));
+                return CreateValidationProblem(
+                    IdentityResult.Failed(userManager.ErrorDescriber.InvalidEmail(email)));
 
             var user = new TUser();
             await userManager.SetPhoneNumberAsync(user, registration.PhoneNumber);
             await userStore.SetUserNameAsync(user, email, CancellationToken.None);
             await emailStore.SetEmailAsync(user, email, CancellationToken.None);
 
-
             var claims = new List<Claim>
             {
                 new(ClaimTypes.Role, RolesConstants.UserRole),
                 new("DisplayName", name),
-                new(ClaimTypes.Gender, ((int)registration.Gender).ToString()),
-                new(ClaimsConstants.AgeClaim, registration.Age.ToString()),
-                new(ClaimsConstants.JoinDateClaim, DateTime.UtcNow.Date.ToString(CultureInfo.InvariantCulture))
+                new(ClaimsConstants.JoinDateClaim,
+                    DateTime.UtcNow.Date.ToString(CultureInfo.InvariantCulture))
             };
+
+            // Add optional claims only if provided
+            if (registration.Gender is not null)
+            {
+                claims.Add(new Claim(ClaimTypes.Gender, ((int)registration.Gender).ToString()));
+            }
+
+            if (registration.Age is not null)
+            {
+                claims.Add(new Claim(ClaimsConstants.AgeClaim, registration.Age.Value.ToString()));
+            }
+
             var result = await userManager.CreateAsync(user, registration.Password);
 
             if (!result.Succeeded) return CreateValidationProblem(result);
@@ -95,8 +109,10 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             await userManager.AddClaimsAsync(user, claims);
 
             await SendConfirmationEmailAsync(user, userManager, context, email);
+
             return TypedResults.Ok();
         });
+
 
         // Updated Login endpoint in IdentityApiEndpointRouteBuilderExtensions.cs
         routeGroup.MapPost("/login", async Task<Results<Ok<AccessTokenResponse>, EmptyHttpResult, ProblemHttpResult>>
