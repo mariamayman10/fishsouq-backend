@@ -2,6 +2,6 @@
 
 public record CreateOrderItem
 {
-    public int ProductId { get; init; }
+    public int ProductSizeId { get; init; }
     public int Quantity { get; init; }
 }

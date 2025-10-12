@@ -23,7 +23,7 @@ public async Task<Result<UserDto>> Handle(Query request, CancellationToken ct)
 {
     var user = await db.Users
         .Include(u => u.Orders)
-        .ThenInclude(o => o.Products)
+        .ThenInclude(o => o.OrderProducts)
         .FirstOrDefaultAsync(u => u.Id == request.Id, ct);
 
     if (user is null)
@@ -58,11 +58,12 @@ public async Task<Result<UserDto>> Handle(Query request, CancellationToken ct)
             Status = o.Status,
             CreatedAt = o.CreatedAt,
             TotalAmount = o.TotalPrice,
-            Items = o.Products?.Select(p => new OrderItem
+            Items = o.OrderProducts?.Select(op => new OrderItem
             {
-                ProductId = p.ProductId,
-                Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice
+                ProductId = op.ProductSize.ProductId,
+                SizeName = op.ProductSize.SizeName,
+                Quantity = op.Quantity,
+                UnitPrice = op.UnitPrice
             }).ToList() ?? new List<OrderItem>(),
             PaymentInfo = o.PaymentInfo ?? "",
             DeliveryDate = o.DeliveryDate

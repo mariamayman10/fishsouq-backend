@@ -18,10 +18,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.Description)
             .HasMaxLength(LengthConstants.ProductDescription);
 
-        builder.Property(p => p.Price)
-            .IsRequired()
-            .HasPrecision(18, 2);
-
         builder.Property(p => p.Quantity)
             .IsRequired()
             .HasPrecision(18, 2);

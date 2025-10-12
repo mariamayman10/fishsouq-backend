@@ -140,12 +140,7 @@ public static class GetOrders
                     Status = o.Status,
                     TotalPrice = o.TotalPrice,
                     UserName = o.User.UserName,
-                    DeliveryAddress = o.AddressId, // or any desired projection
-                    Products = o.Products.Select(p => new {
-                        p.ProductId,
-                        p.Quantity,
-                        p.UnitPrice
-                    }).ToList()
+                    Products = o.OrderProducts.Count
                 })
                 .ToListAsync(cancellationToken);
 

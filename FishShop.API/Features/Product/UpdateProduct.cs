@@ -1,5 +1,6 @@
 using Carter;
 using FishShop.API.Database;
+using FishShop.API.Entities;
 using FishShop.API.Shared;
 using FluentValidation;
 using Mapster;
@@ -15,10 +16,12 @@ public static class UpdateProduct
     {
         public int Id { get; set; }
         public string? Name { get; set; }
-        public decimal? Price { get; set; }
         public int? Quantity { get; set; }
         public string? Description { get; set; }
         public int? CategoryId { get; set; }
+
+        // new: map of size name → price
+        public Dictionary<string, decimal>? Sizes { get; set; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -26,23 +29,15 @@ public static class UpdateProduct
         public Validator()
         {
             RuleFor(x => x.Id)
-                .GreaterThan(-1)
+                .GreaterThan(0)
                 .WithMessage("Invalid product ID");
 
             When(x => x.Name != null, () =>
             {
                 RuleFor(x => x.Name)
                     .NotEmpty()
-                    .WithMessage("Name cannot be empty when provided")
                     .MaximumLength(LengthConstants.ProductName)
                     .WithMessage($"Name cannot exceed {LengthConstants.ProductName} characters");
-            });
-
-            When(x => x.Price.HasValue, () =>
-            {
-                RuleFor(x => x.Price)
-                    .GreaterThan(-1)
-                    .WithMessage("Price must be greater than 0");
             });
 
             When(x => x.Quantity.HasValue, () =>
@@ -62,27 +57,32 @@ public static class UpdateProduct
             When(x => x.CategoryId.HasValue, () =>
             {
                 RuleFor(x => x.CategoryId)
-                    .GreaterThan(-1)
+                    .GreaterThan(0)
                     .WithMessage("Invalid category ID");
+            });
+
+            When(x => x.Sizes != null, () =>
+            {
+                RuleForEach(x => x.Sizes!)
+                    .Must(s => s.Value > 0)
+                    .WithMessage("Each size must have a positive price");
             });
         }
     }
 
-    internal sealed class Handler(AppDbContext dbContext, ILogger<UpdateProductEndpoint> logger) : IRequestHandler<Command, Result>
+    internal sealed class Handler(AppDbContext dbContext, ILogger<UpdateProductEndpoint> logger)
+        : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
             logger.LogInformation("Attempting to update product {ProductId}", request.Id);
 
-
             var product = await dbContext.Products
+                .Include(p => p.Sizes)
                 .FirstOrDefaultAsync(x => x.Id == request.Id && !x.IsDeleted, cancellationToken);
 
             if (product == null)
-            {
-                logger.LogWarning("Product {ProductId} not found or is deleted", request.Id);
-                return Result.NotFound( "Product not found");
-            }
+                return Result.NotFound("Product not found");
 
             if (request.CategoryId.HasValue)
             {
@@ -90,62 +90,42 @@ public static class UpdateProduct
                     .AnyAsync(x => x.Id == request.CategoryId && !x.IsDeleted, cancellationToken);
 
                 if (!categoryExists)
-                {
-                    logger.LogWarning("Category {CategoryId} not found or is deleted", request.CategoryId);
-                    return Result.NotFound( "Category not found");
-                }
+                    return Result.NotFound("Category not found");
             }
 
             if (request.Name != null)
             {
                 var nameExists = await dbContext.Products
-                    .AnyAsync(x => x.Name == request.Name &&
-                                   x.Id != request.Id &&
-                                   !x.IsDeleted,
-                        cancellationToken);
+                    .AnyAsync(x => x.Name == request.Name && x.Id != request.Id && !x.IsDeleted, cancellationToken);
 
                 if (nameExists)
-                {
-                    logger.LogWarning("Product name '{ProductName}' already exists", request.Name);
                     return Result.BadRequest("A product with this name already exists");
-                }
             }
 
-            // Track original values for logging
-            var originalValues = new
-            {
-                product.Name,
-                product.Price,
-                product.Quantity,
-                product.Description,
-                product.CategoryId
-            };
-
-            // Update product
+            // Update basic fields
             product.Name = request.Name ?? product.Name;
-            product.Price = request.Price ?? product.Price;
             product.Quantity = request.Quantity ?? product.Quantity;
             product.Description = request.Description ?? product.Description;
             product.CategoryId = request.CategoryId ?? product.CategoryId;
 
+            // Update product sizes if provided
+            if (request.Sizes != null)
+            {
+                // Remove old sizes
+                dbContext.ProductSizes.RemoveRange(product.Sizes);
+
+                // Add new ones
+                product.Sizes = request.Sizes.Select(s => new ProductSize
+                {
+                    SizeName = s.Key,
+                    Price = s.Value,
+                    ProductId = product.Id
+                }).ToList();
+            }
+
             await dbContext.SaveChangesAsync(cancellationToken);
 
-
-            logger.LogInformation(
-                "Successfully updated product {ProductId}. Changes: {@Changes}",
-                request.Id,
-                new
-                {
-                    Original = originalValues,
-                    New = new
-                    {
-                        product.Name,
-                        product.Price,
-                        product.Quantity,
-                        product.Description,
-                        product.CategoryId
-                    }
-                });
+            logger.LogInformation("Successfully updated product {ProductId}", request.Id);
 
             return Result.Success();
         }
@@ -165,27 +145,18 @@ public class UpdateProductEndpoint : ICarterModule
                 var command = request.Adapt<UpdateProduct.Command>();
                 command.Id = id;
 
-                logger.LogInformation(
-                    "Received request to update product {ProductId} with data: {@RequestData}",
-                    id,
-                    request);
+                logger.LogInformation("Received request to update product {ProductId}", id);
 
                 var result = await sender.Send(command);
 
-                if (!result.IsSuccess)
-                {
-                    logger.LogWarning("Failed to update product {ProductId}: {Error}", id, result.Error);
-                    return Results.BadRequest(result.Error);
-                }
-
-                return Results.NoContent();
+                return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
             })
             .RequireAuthorization(PolicyConstants.ManagerOrAdminPolicy)
             .WithName("UpdateProduct")
             .WithOpenApi(operation => new OpenApiOperation(operation)
             {
-                Summary = "Update a product",
-                Description = "Updates an existing product's details. Requires admin privileges."
+                Summary = "Update a product with its sizes",
+                Description = "Updates an existing product and replaces its size/price list. Requires admin privileges."
             });
     }
 }

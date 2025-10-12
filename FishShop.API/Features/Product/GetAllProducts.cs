@@ -102,7 +102,6 @@ public static class GetAllProducts
                                 p."Id", 
                                 p."Quantity", 
                                 p."Name", 
-                                p."Price", 
                                 p."Description",
                                 p."ImageUrl",
                                 COALESCE(ps."TotalQuantitySold", 0) AS "TotalQuantitySold",
@@ -141,12 +140,8 @@ public static class GetAllProducts
 
             query = request.OrderBy switch
             {
-                OrderBy.PriceAsc => query.OrderBy(p => p.Price),
-                OrderBy.PriceDesc => query.OrderByDescending(p => p.Price),
                 OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
                 OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
-                OrderBy.AvQuantityAsc => query.OrderBy(p => p.Quantity),
-                OrderBy.AvQuantityDesc => query.OrderByDescending(p => p.Quantity),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -157,7 +152,13 @@ public static class GetAllProducts
                 {
                     Id = p.Id,
                     Name = p.Name ?? "",
-                    Price = p.Price,
+                    Sizes = p.Sizes
+                        .Select(s => new ProductSizeDto
+                        {
+                            SizeName = s.SizeName,
+                            Price = s.Price
+                        })
+                        .ToList(),
                     Quantity = p.Quantity,
                     Description = p.Description ?? "",
                     ImageUrl = p.ImageUrl ?? "",

@@ -52,7 +52,7 @@ public static class DeleteProduct
 
             // Check if product is in any active orders
             var isInActiveOrders = await dbContext.OrderProducts
-                .AnyAsync(x => x.ProductId == request.Id &&
+                .AnyAsync(x => x.ProductSize.ProductId == request.Id &&
                                x.Order!.Status != OrderStatus.Cancelled &&
                                x.Order.Status != OrderStatus.Delivered,
                     cancellationToken);

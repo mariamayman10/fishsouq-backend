@@ -1,16 +1,15 @@
-﻿using FishShop.API.Entities;
-using Microsoft.OpenApi.Models;
-
-namespace FishShop.API.Features;
-
-using Carter;
+﻿using Carter;
 using FishShop.API.Contracts;
 using FishShop.API.Database;
+using FishShop.API.Entities;
 using FishShop.API.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using System.Security.Claims;
+
+namespace FishShop.API.Features;
 
 public static class GetUsers
 {
@@ -23,24 +22,26 @@ public static class GetUsers
         public bool SortByOrdersCountDesc { get; set; } = false;
     }
 
-    internal sealed class Handler(AppDbContext db, UserManager<User> userManager, ILogger<GetOrdersEndpoint> logger)
+    internal sealed class Handler(AppDbContext db, UserManager<User> userManager, ILogger<GetUsersEndpoint> logger)
         : IRequestHandler<Query, Result<PagedResult<UserDto>>>
     {
         public async Task<Result<PagedResult<UserDto>>> Handle(Query request, CancellationToken ct)
         {
+            // Base query: include orders and their related order products and product sizes
             var baseQuery = db.Users
                 .Include(u => u.Orders)
-                    .ThenInclude(o => o.Products)
+                    .ThenInclude(o => o.OrderProducts)
+                        .ThenInclude(op => op.ProductSize)
+                            .ThenInclude(ps => ps.Product)
                 .AsQueryable();
 
+            // Filter by email
             if (!string.IsNullOrWhiteSpace(request.Email))
-            {
                 baseQuery = baseQuery.Where(u => u.Email!.Contains(request.Email));
-            }
 
             var users = await baseQuery.ToListAsync(ct);
 
-            // Filter by Role (manual filtering because roles are in claims)
+            // Filter by role
             if (!string.IsNullOrWhiteSpace(request.Role))
             {
                 users = users.Where(u =>
@@ -51,15 +52,14 @@ public static class GetUsers
                 }).ToList();
             }
 
-            // Sort by number of orders
+            // Sort
             if (request.SortByOrdersCountDesc)
             {
-                logger.LogInformation("Sorting by orders desc");   
+                logger.LogInformation("Sorting users by orders count descending");
                 users = users.OrderByDescending(u => u.Orders.Count).ToList();
             }
 
             var totalItems = users.Count;
-
             var pagedUsers = users
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
@@ -71,13 +71,14 @@ public static class GetUsers
             {
                 var claims = await userManager.GetClaimsAsync(user);
                 var claimsDict = claims.ToDictionary(c => c.Type, c => c.Value);
+
                 result.Add(new UserDto
                 {
                     Id = user.Id,
                     Email = user.Email!,
                     DisplayName = claimsDict.GetValueOrDefault("DisplayName") ?? "",
                     Gender = claimsDict.GetValueOrDefault(ClaimTypes.Gender) ?? "",
-                    PhoneNumber = user.PhoneNumber!,
+                    PhoneNumber = user.PhoneNumber ?? "",
                     JoinDate = claimsDict.GetValueOrDefault("JoinDate") ?? "",
                     Age = claimsDict.GetValueOrDefault("Age") ?? "",
                     Role = claimsDict.GetValueOrDefault(ClaimTypes.Role) ?? "",
@@ -89,14 +90,15 @@ public static class GetUsers
                         Status = o.Status,
                         CreatedAt = o.CreatedAt,
                         TotalAmount = o.TotalPrice,
-                        Items = o.Products?.Select(p => new OrderItem
-                        {
-                            ProductId = p.ProductId,
-                            Quantity = p.Quantity,
-                            UnitPrice = p.UnitPrice
-                        }).ToList() ?? new List<OrderItem>(),
                         PaymentInfo = o.PaymentInfo ?? "",
-                        DeliveryDate = o.DeliveryDate
+                        DeliveryDate = o.DeliveryDate,
+                        Items = o.OrderProducts?.Select(op => new OrderItem
+                        {
+                            ProductId = op.ProductSize.ProductId,
+                            SizeName = op.ProductSize.SizeName,
+                            Quantity = op.Quantity,
+                            UnitPrice = op.UnitPrice
+                        }).ToList() ?? new List<OrderItem>()
                     }).ToList()
                 });
             }

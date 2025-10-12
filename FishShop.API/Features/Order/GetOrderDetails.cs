@@ -48,8 +48,8 @@ public static class GetOrderDetails
 
             var order = await dbContext.Orders
                 .Where(o => o.Id == request.Id)
-                .Include(o => o.Products!)
-                    .ThenInclude(op => op.Product)
+                .Include(o => o.OrderProducts!)
+                    .ThenInclude(op => op.ProductSize)
                 .Include(o => o.User)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -69,7 +69,7 @@ public static class GetOrderDetails
             {
                 Id = order.Id,
                 AddressId = order.AddressId,
-                TotalAmount = order.Products.Sum(p => p.UnitPrice * p.Quantity),
+                TotalAmount = order.OrderProducts.Sum(p => p.UnitPrice * p.Quantity),
                 UserName = order.User?.UserName ?? "",
                 UserId = order.UserId,
                 CreatedAt = order.CreatedAt,
@@ -79,11 +79,12 @@ public static class GetOrderDetails
                 PaymentInfo = order.PaymentInfo,
                 Discount = order.Discount,
                 PromoCode = order.PromoCode,
-                Items = order.Products.Select(p => new OrderItem
+                Items = order.OrderProducts.Select(op => new OrderItem
                 {
-                    ProductId = p.ProductId,
-                    Quantity = p.Quantity,
-                    UnitPrice = p.UnitPrice
+                    ProductId = op.ProductSize.ProductId,
+                    SizeName = op.ProductSize.SizeName,
+                    Quantity = op.Quantity,
+                    UnitPrice = op.UnitPrice
                 }).ToList()
             };
 

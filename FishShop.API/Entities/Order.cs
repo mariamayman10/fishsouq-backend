@@ -20,5 +20,5 @@ public class Order
     public string? PaymentInfo { get; set; }
 
 
-    public ICollection<OrderProduct>? Products { get; init; }
+    public ICollection<OrderProduct>? OrderProducts { get; init; }
 }

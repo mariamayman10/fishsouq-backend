@@ -2,13 +2,12 @@ using FishShop.API.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace FishShop.API.Database.Configurations;
-
 public class OrderProductConfiguration : IEntityTypeConfiguration<OrderProduct>
 {
     public void Configure(EntityTypeBuilder<OrderProduct> builder)
     {
-        builder.HasKey(op => new { op.OrderId, op.ProductId });
+        // composite key: OrderId + ProductSizeId
+        builder.HasKey(op => new { op.OrderId, op.ProductSizeId });
 
         builder.Property(op => op.Quantity)
             .IsRequired();
@@ -17,12 +16,14 @@ public class OrderProductConfiguration : IEntityTypeConfiguration<OrderProduct>
             .IsRequired()
             .HasPrecision(18, 2);
 
+        // FK to Order
         builder.HasOne(op => op.Order)
-            .WithMany(o => o.Products)
+            .WithMany(o => o.OrderProducts)
             .HasForeignKey(op => op.OrderId);
 
-        builder.HasOne(op => op.Product)
-            .WithMany(p => p.OrderProducts)
-            .HasForeignKey(op => op.ProductId);
+        // FK to ProductSize
+        builder.HasOne(op => op.ProductSize)
+            .WithMany(ps => ps.OrderProducts)
+            .HasForeignKey(op => op.ProductSizeId);
     }
 }

@@ -94,10 +94,9 @@ public static class GetUserOrders
                     CreatedAt = o.CreatedAt,
                     TotalPrice = o.TotalPrice,
                     Status = o.Status,
-                    DeliveryDate = o.DeliveryDate,
                     DeliveryType = o.DeliveryType,
                     DeliveryAddress = o.AddressId,
-                    Products = o.Products
+                    Products = o.OrderProducts.Count
                 })
                 .ToListAsync(cancellationToken);
 

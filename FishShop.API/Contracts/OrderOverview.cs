@@ -15,5 +15,5 @@ public record OrderOverview
     public DateTime DeliveryDate { get; set; }
     public DeliveryType DeliveryType { get; set; }
     public string DeliveryAddress { get; init; }
-    public IEnumerable? Products { get; set; }
+    public int Products { get; set; }
 }

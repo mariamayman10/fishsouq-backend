@@ -7,6 +7,6 @@ public record ProductDetails
     public string Description { get; init; }
     public decimal Quantity { get; set; }
     public int CategoryId { get; set; }
-    public decimal Price { get; init; }
+    public List<ProductSizeDto>? Sizes { get; set; }
     public string ImageUrl { get; init; }
 }

@@ -22,7 +22,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(o => o.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(o => o.Products)
+        builder.HasMany(o => o.OrderProducts)
             .WithOne(op => op.Order)
             .HasForeignKey(op => op.OrderId);
     }

@@ -4,6 +4,7 @@ using FishShop.API.Database;
 using FishShop.API.Shared;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace FishShop.API.Features;
 
@@ -19,7 +20,7 @@ public static class GetProduct
         public Validator()
         {
             RuleFor(x => x.Id)
-                .GreaterThan(-1)
+                .GreaterThan(0)
                 .WithMessage("Invalid product Id");
         }
     }
@@ -27,11 +28,9 @@ public static class GetProduct
     internal sealed class Handler(AppDbContext dbContext, ILogger<GetProductEndpoint> logger)
         : IRequestHandler<Query, Result<ProductDetails>>
     {
-        public async Task<Result<ProductDetails>> Handle(Query request,
-            CancellationToken cancellationToken)
+        public async Task<Result<ProductDetails>> Handle(Query request, CancellationToken cancellationToken)
         {
-            logger.LogInformation("Handling GetProduct request for product {ProductId}",
-                request.Id);
+            logger.LogInformation("Handling GetProduct request for product {ProductId}", request.Id);
 
             var validator = new Validator();
             var validationResult = await validator.ValidateAsync(request, cancellationToken);
@@ -41,7 +40,10 @@ public static class GetProduct
                 return Result.BadRequest<ProductDetails>(validationResult.ToString());
             }
 
-            var product = dbContext.Products.Where(p => p.Id == request.Id)
+            var product = await dbContext.Products
+                .AsNoTracking()
+                .Where(p => p.Id == request.Id)
+                .Include(p => p.Sizes)
                 .Select(p => new ProductDetails
                 {
                     Id = p.Id,
@@ -49,14 +51,22 @@ public static class GetProduct
                     Description = p.Description,
                     Quantity = p.Quantity,
                     CategoryId = p.CategoryId,
-                    Price = p.Price,
+                    Sizes = p.Sizes
+                        .Select(s => new ProductSizeDto
+                        {
+                            Id = s.Id,
+                            SizeName = s.SizeName,
+                            Price = s.Price
+                        })
+                        .ToList(),
                     ImageUrl = p.ImageUrl
-                }).SingleOrDefault();
+                })
+                .SingleOrDefaultAsync(cancellationToken);
 
             if (product is null)
-                return Result.NotFound<ProductDetails>("An error occurred while retrieving products, product not found.");
+                return Result.NotFound<ProductDetails>("Product not found.");
 
-            logger.LogInformation("Product retrieved");
+            logger.LogInformation("Product {ProductId} retrieved successfully", request.Id);
 
             return Result.Success(product);
         }
@@ -67,17 +77,11 @@ public class GetProductEndpoint : ICarterModule
 {
     public void AddRoutes(IEndpointRouteBuilder app)
     {
-        app.MapGet("api/products/{id}", async (
-                int id,
-                ISender sender) =>
-            {
-                var query = new GetProduct.Query
-                {
-                    Id = id
-                };
-                var result = await sender.Send(query);
-
-                return result.Resolve();
-            });
+        app.MapGet("api/products/{id:int}", async (int id, ISender sender) =>
+        {
+            var query = new GetProduct.Query { Id = id };
+            var result = await sender.Send(query);
+            return result.Resolve();
+        });
     }
 }

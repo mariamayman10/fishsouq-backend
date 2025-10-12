@@ -17,7 +17,6 @@ public static class GetProducts
         public int Page { get; init; }
         public int PageSize { get; init; }
         public int? CategoryId { get; init; }
-        public OrderBy? OrderBy { get; init; }
         public string? SearchText { get; init; }
     }
 
@@ -65,94 +64,75 @@ public static class GetProducts
 
             return Result.Success(pagedResult);
         }
-// on search while choosing sort from high to low, the result of search is not sorted
+
         private async Task<PagedResult<Product>> HandleWithSearch(Query request, CancellationToken cancellationToken)
         {
-            var orderByString = request.OrderBy switch
+            // guard: treat page <= 0 as page 1 to prevent negative skip
+            var page = request.Page <= 0 ? 1 : request.Page;
+            var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+
+            // base query
+            var q = dbContext.Products
+                .Where(p => p.Quantity > 0 && !p.IsDeleted);
+
+            if (request.CategoryId.HasValue)
+                q = q.Where(p => p.CategoryId == request.CategoryId.Value);
+
+            // apply search (case-insensitive, Postgres ILIKE)
+            var search = request.SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
             {
-                OrderBy.PriceAsc => @", p.""Price"" ASC",
-                OrderBy.PriceDesc => @", p.""Price"" DESC",
-                OrderBy.SalesAsc => @", ps.""TotalQuantitySold"" ASC",
-                OrderBy.SalesDesc or null => @", ps.""TotalQuantitySold"" DESC",
-                _ => throw new ArgumentOutOfRangeException()
-            };
+                // search in name OR description
+                q = q.Where(p =>
+                    EF.Functions.ILike(p.Name!, $"%{search}%")
+                    || EF.Functions.ILike(p.Description!, $"%{search}%"));
+            }
 
-            object[] queryParams =
-            [
-                new NpgsqlParameter("searchTerm", request.SearchText),
-                new NpgsqlParameter("pageSize", request.PageSize),
-                new NpgsqlParameter("pageNumber", request.Page - 1)
-            ];
+            // total count
+            var totalItems = await q.CountAsync(cancellationToken);
 
-            var categoryCondition =
-                request.CategoryId.HasValue ? $"AND \"CategoryId\" = {request.CategoryId}" : string.Empty;
-
-            var countQuery = $"""
-                              SELECT COUNT(1) AS "Value"
-                              FROM "Products" AS p
-                              LEFT JOIN "ProductSales" AS ps ON p."Id" = ps."ProductId"
-                              WHERE p."Quantity" > 0 AND p."IsDeleted" = FALSE
-                                {categoryCondition}
-                                AND (similarity(p."Name", @searchTerm) >= 0.3 OR p."Name" ILIKE '%' || @searchTerm || '%')
-                              """;
-
-            var totalItems = await dbContext.Database.SqlQueryRaw<int>(countQuery, queryParams)
-                .FirstAsync(cancellationToken);
-
-            var rawQuery = $"""
-                            SELECT p."Id", p."Quantity", p."Name", p."Price", p."Description", p."ImageUrl"
-                            FROM "Products" AS p
-                            LEFT JOIN "ProductSales" AS ps ON p."Id" = ps."ProductId"
-                            WHERE p."Quantity" > 0 AND p."IsDeleted" = FALSE
-                              {categoryCondition}
-                              AND (similarity(p."Name", @searchTerm) >= 0.3 OR p."Name" ILIKE '%' || @searchTerm || '%')
-                            ORDER BY similarity(p."Name", @searchTerm) DESC {orderByString}
-                            LIMIT @PageSize OFFSET @PageNumber * @PageSize
-                            """;
-
-            var query = dbContext.Database.SqlQueryRaw<Product>(rawQuery,queryParams).IgnoreQueryFilters();
-
-            var items = await query
+            // fetch paged items with sizes projected
+            var items = await q
                 .AsNoTracking()
+                .OrderBy(p => p.Id) // stable ordering for pagination
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new Product
+                {
+                    Id = p.Id,
+                    Name = p.Name!,
+                    Quantity = p.Quantity,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    Sizes = p.Sizes.Select(s => new ProductSizeDto
+                    {
+                        Id = s.Id,
+                        SizeName = s.SizeName,
+                        Price = s.Price
+                    }).ToList()
+                })
                 .ToListAsync(cancellationToken);
 
-            var pagedResult = new PagedResult<Product>
+            return new PagedResult<Product>
             {
                 Items = items,
                 TotalItems = totalItems,
-                Page = request.Page,
-                PageSize = request.PageSize
+                Page = page,
+                PageSize = pageSize
             };
-
-            return pagedResult;
         }
+
 
         private async Task<PagedResult<Product>> HandleWithoutSearch(Query request, CancellationToken cancellationToken)
         {
-            var query = dbContext.Products.Where(p => p.Quantity > 0);
+            var query = dbContext.Products
+                .Where(p => p.Quantity > 0 && !p.IsDeleted);
 
             if (request.CategoryId.HasValue)
                 query = query.Where(p => p.CategoryId == request.CategoryId.Value);
+            query.Include(p => p.Sizes);
 
             var totalItems = await query.CountAsync(cancellationToken);
-
-            // query = request.OrderBy switch
-            // {
-            //     OrderBy.PriceAsc => query.OrderBy(p => p.Price).ThenBy(p => p.Id),
-            //     OrderBy.PriceDesc => query.OrderByDescending(p => p.Price).ThenBy(p => p.Id),
-            //     OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales!.TotalQuantitySold).ThenBy(p => p.Id),
-            //     OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales!.TotalQuantitySold)
-            //         .ThenBy(p => p.Id),
-            //     _ => throw new ArgumentOutOfRangeException()
-            // };
-            query = request.OrderBy switch
-            {
-                OrderBy.PriceAsc => query.OrderBy(p => p.Price),
-                OrderBy.PriceDesc => query.OrderByDescending(p => p.Price),
-                OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
-                OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
-                _ => throw new ArgumentOutOfRangeException()
-            };
 
             var items = await query
                 .AsNoTracking()
@@ -162,22 +142,29 @@ public static class GetProducts
                 {
                     Id = p.Id,
                     Name = p.Name!,
-                    Price = p.Price,
                     Quantity = p.Quantity,
                     Description = p.Description,
-                    ImageUrl = p.ImageUrl
+                    ImageUrl = p.ImageUrl,
+                    Sizes = p.Sizes
+                        .Select(s => new ProductSizeDto
+                        {
+                            Id = s.Id,
+                            SizeName = s.SizeName,
+                            Price = s.Price
+                        })
+                        .ToList()
                 })
                 .ToListAsync(cancellationToken);
+
             logger.LogInformation("Fetched {items} products", items.Count);
-            var pagedResult = new PagedResult<Product>
+
+            return new PagedResult<Product>
             {
                 Items = items,
                 TotalItems = totalItems,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
-
-            return pagedResult;
         }
     }
 }
@@ -191,7 +178,6 @@ public class GetProductsEndpoint : ICarterModule
             int pageSize,
             int? categoryId,
             string? searchText,
-            OrderBy? orderBy,
             ISender sender) =>
         {
             var query = new GetProducts.Query
@@ -199,7 +185,6 @@ public class GetProductsEndpoint : ICarterModule
                 Page = page,
                 PageSize = pageSize,
                 CategoryId = categoryId,
-                OrderBy = orderBy,
                 SearchText = searchText
             };
             var result = await sender.Send(query);

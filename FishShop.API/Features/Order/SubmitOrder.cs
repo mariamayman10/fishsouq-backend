@@ -23,7 +23,7 @@ public static class SubmitOrder
         public string? PaymentInfo { get; init; }
         public decimal Discount { get; init; }
         public int DeliveryFees { get; init; }
-        public string PromoCode { get; init; }
+        public string? PromoCode { get; init; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -33,7 +33,7 @@ public static class SubmitOrder
             RuleFor(x => x.AddressId)
                 .NotEmpty()
                 .When(x => x.DeliveryType != DeliveryType.PickUp)
-                .WithMessage("Address ID is required when delivery type is not office pickup");     
+                .WithMessage("Address ID is required when delivery type is not office pickup");
 
             RuleFor(x => x.Items)
                 .NotEmpty()
@@ -42,14 +42,15 @@ public static class SubmitOrder
             RuleForEach(x => x.Items)
                 .ChildRules(item =>
                 {
-                    item.RuleFor(x => x.ProductId)
+                    item.RuleFor(i => i.ProductSizeId)
                         .GreaterThan(0)
-                        .WithMessage("Invalid product ID");
-                    item.RuleFor(x => x.Quantity)
-                        .GreaterThan(-1)
+                        .WithMessage("Invalid product size ID");
+
+                    item.RuleFor(i => i.Quantity)
+                        .GreaterThan(0)
                         .WithMessage("Quantity must be greater than 0");
                 });
-            
+
             RuleFor(x => x.PaymentInfo)
                 .NotEmpty()
                 .When(x => x.DeliveryType != DeliveryType.PickUp)
@@ -57,12 +58,13 @@ public static class SubmitOrder
         }
     }
 
-    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor) : IRequestHandler<Command, Result<int>>
+    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor)
+        : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
             var userId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var role = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Role); // ← GET the role claim
+            var role = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Role);
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -70,40 +72,39 @@ public static class SubmitOrder
                 return Result.BadRequest<int>("Unauthorized access: user ID not found");
             }
 
-            logger.LogInformation("User {UserId} with role {Role} attempting to submit order", userId, role);
-
-            if (role == "ManagerRole" || role == "AdminRole")
+            if (role is "ManagerRole" or "AdminRole")
             {
                 logger.LogWarning("User {UserId} with role {Role} is not allowed to submit orders", userId, role);
-                return Result.BadRequest<int>("Manager and Admins are not allowed to submit orders");
+                return Result.BadRequest<int>("Managers and Admins are not allowed to submit orders");
             }
-            logger.LogInformation("Attempting to submit order for user {UserId} with {ItemCount} items",
-                request.UserId, request.Items!.Count);
 
             var validator = new Validator();
             var validationResult = await validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
             {
-                logger.LogInformation("Invalid request, '{UserId}'", request.UserId);
                 return Result.BadRequest<int>(validationResult.ToString());
             }
 
-            var productIds = request.Items.Select(i => i.ProductId).ToList();
+            // Get all product size IDs from request
+            var sizeIds = request.Items!.Select(i => i.ProductSizeId).ToList();
 
-            var products = await dbContext.Products
-                .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
-                .Select(p => new { p.Id, p.Price, p.Quantity })
-                .ToDictionaryAsync(p => p.Id, p => new { p.Price, p.Quantity }, cancellationToken);
+            // Fetch corresponding ProductSizes
+            var productSizes = await dbContext.ProductSizes
+                .Include(ps => ps.Product)
+                .Where(ps => sizeIds.Contains(ps.Id) && !ps.Product.IsDeleted)
+                .ToDictionaryAsync(ps => ps.Id, cancellationToken);
 
-            // Validate all products exist and have sufficient stock
+            // Validate existence
             foreach (var item in request.Items)
             {
-                if (!products.ContainsKey(item.ProductId))
+                if (!productSizes.ContainsKey(item.ProductSizeId))
                 {
-                    logger.LogWarning("Product {ProductId} not found or is deleted", item.ProductId);
-                    return Result.NotFound<int>($"Product {item.ProductId} not found");
+                    logger.LogWarning("ProductSize {Id} not found", item.ProductSizeId);
+                    return Result.NotFound<int>($"Product size {item.ProductSizeId} not found");
                 }
             }
+
+            // Handle promo
             if (!string.IsNullOrWhiteSpace(request.PromoCode))
             {
                 var promo = await dbContext.PromoCodes
@@ -111,20 +112,21 @@ public static class SubmitOrder
 
                 if (promo is null)
                 {
-                    logger.LogWarning("Promo code {PromoCode} not found or inactive", request.PromoCode);
+                    logger.LogWarning("Promo code {Code} not found or inactive", request.PromoCode);
                     return Result.NotFound<int>($"Promo code {request.PromoCode} not found or inactive");
                 }
 
                 promo.TimesUsed++;
                 dbContext.PromoCodes.Update(promo);
             }
-            
-            decimal totalPrice = request.Items.Sum(i => i.Quantity * products[i.ProductId].Price);
-            
+
+            // Calculate total
+            decimal totalPrice = request.Items.Sum(i => i.Quantity * productSizes[i.ProductSizeId].Price);
+
             var order = new Order
             {
-                UserId = request.UserId,
-                AddressId = request.AddressId != null? request.AddressId: "",
+                UserId = userId,
+                AddressId = request.AddressId ?? "",
                 CreatedAt = DateTime.UtcNow,
                 DeliveryType = request.DeliveryType,
                 DeliveryFees = request.DeliveryFees,
@@ -133,22 +135,18 @@ public static class SubmitOrder
                 Status = OrderStatus.Pending,
                 PaymentInfo = request.PaymentInfo,
                 PromoCode = request.PromoCode,
-                Products = request.Items.Select(i => new OrderProduct
+                OrderProducts = request.Items.Select(i => new OrderProduct
                 {
-                    ProductId = i.ProductId,
+                    ProductSizeId = i.ProductSizeId,
                     Quantity = i.Quantity,
-                    UnitPrice = products[i.ProductId].Price
+                    UnitPrice = productSizes[i.ProductSizeId].Price
                 }).ToList()
             };
 
             dbContext.Orders.Add(order);
-
             await dbContext.SaveChangesAsync(cancellationToken);
 
-
-            logger.LogInformation("Successfully submitted order {OrderId} for user {UserId}",
-                order.Id, request.UserId);
-
+            logger.LogInformation("Successfully submitted order {OrderId} for user {UserId}", order.Id, userId);
             return Result.Success(order.Id);
         }
     }
@@ -171,8 +169,6 @@ public class SubmitOrderEndpoint : ICarterModule
                     return Results.Unauthorized();
                 }
 
-                logger.LogInformation("User {UserId} attempting to submit order", userId);
-
                 var command = new SubmitOrder.Command
                 {
                     UserId = userId,
@@ -186,7 +182,6 @@ public class SubmitOrderEndpoint : ICarterModule
                 };
 
                 var result = await sender.Send(command);
-
                 return result.Resolve();
             })
             .RequireAuthorization()

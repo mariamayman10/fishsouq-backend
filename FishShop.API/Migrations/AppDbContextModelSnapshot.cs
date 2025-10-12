@@ -136,7 +136,7 @@ namespace FishShop.API.Migrations
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int>("ProductSizeId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
@@ -146,9 +146,9 @@ namespace FishShop.API.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.HasKey("OrderId", "ProductId");
+                    b.HasKey("OrderId", "ProductSizeId");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductSizeId");
 
                     b.ToTable("OrderProducts");
                 });
@@ -184,10 +184,6 @@ namespace FishShop.API.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -213,6 +209,33 @@ namespace FishShop.API.Migrations
                     b.HasKey("ProductId");
 
                     b.ToTable("ProductSales");
+                });
+
+            modelBuilder.Entity("FishShop.API.Entities.ProductSize", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SizeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductSizes", (string)null);
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.PromoCode", b =>
@@ -570,20 +593,20 @@ namespace FishShop.API.Migrations
             modelBuilder.Entity("FishShop.API.Entities.OrderProduct", b =>
                 {
                     b.HasOne("FishShop.API.Entities.Order", "Order")
-                        .WithMany("Products")
+                        .WithMany("OrderProducts")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FishShop.API.Entities.Product", "Product")
+                    b.HasOne("FishShop.API.Entities.ProductSize", "ProductSize")
                         .WithMany("OrderProducts")
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("ProductSizeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Order");
 
-                    b.Navigation("Product");
+                    b.Navigation("ProductSize");
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.Product", b =>
@@ -602,6 +625,17 @@ namespace FishShop.API.Migrations
                     b.HasOne("FishShop.API.Entities.Product", "Product")
                         .WithOne("ProductSales")
                         .HasForeignKey("FishShop.API.Entities.ProductSales", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("FishShop.API.Entities.ProductSize", b =>
+                {
+                    b.HasOne("FishShop.API.Entities.Product", "Product")
+                        .WithMany("Sizes")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -686,14 +720,19 @@ namespace FishShop.API.Migrations
 
             modelBuilder.Entity("FishShop.API.Entities.Order", b =>
                 {
-                    b.Navigation("Products");
+                    b.Navigation("OrderProducts");
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.Product", b =>
                 {
-                    b.Navigation("OrderProducts");
-
                     b.Navigation("ProductSales");
+
+                    b.Navigation("Sizes");
+                });
+
+            modelBuilder.Entity("FishShop.API.Entities.ProductSize", b =>
+                {
+                    b.Navigation("OrderProducts");
                 });
 
             modelBuilder.Entity("FishShop.API.Entities.User", b =>

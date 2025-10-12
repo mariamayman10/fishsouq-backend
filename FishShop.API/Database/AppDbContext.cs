@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<UserAddress> UserAddresses { get; init; }
     public DbSet<AdminPrivileges> AdminPrivileges { get; init; }
     public DbSet<PromoCode> PromoCodes { get; init; }
+    public DbSet<ProductSize> ProductSizes { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -38,6 +39,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
         modelBuilder.ApplyConfiguration(new UserAddressConfiguration());
         modelBuilder.ApplyConfiguration(new AdminPrivilegesConfiguration());
         modelBuilder.ApplyConfiguration(new PromoCodeConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductSizeConfiguration());
     }
 
     public override int SaveChanges()

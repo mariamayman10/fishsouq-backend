@@ -39,8 +39,8 @@ public static class MarkDelivered
                 return Result.BadRequest(validationResult.ToString());
 
             var order = await dbContext.Orders
-                .Include(o => o.Products)!
-                .ThenInclude(op => op.Product)
+                .Include(o => o.OrderProducts)!
+                .ThenInclude(op => op.ProductSize)
                 .FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
 
             if (order == null)
@@ -53,18 +53,18 @@ public static class MarkDelivered
             order.DeliveryDate = DateTime.UtcNow;
 
             // Update ProductSales
-            foreach (var orderProduct in order.Products ?? Enumerable.Empty<OrderProduct>())
+            foreach (var orderProduct in order.OrderProducts ?? Enumerable.Empty<OrderProduct>())
             {
-                if (orderProduct.ProductId == 0 || orderProduct.Quantity == 0) continue;
+                if (orderProduct.ProductSize.ProductId == 0 || orderProduct.Quantity == 0) continue;
 
                 var productSales = await dbContext.Set<ProductSales>()
-                    .FirstOrDefaultAsync(ps => ps.ProductId == orderProduct.ProductId, cancellationToken);
+                    .FirstOrDefaultAsync(ps => ps.ProductId == orderProduct.ProductSize.ProductId, cancellationToken);
 
                 if (productSales == null)
                 {
                     productSales = new ProductSales
                     {
-                        ProductId = orderProduct.ProductId,
+                        ProductId = orderProduct.ProductSize.ProductId,
                         TotalQuantitySold = orderProduct.Quantity,
                         TotalRevenue = orderProduct.Quantity * orderProduct.UnitPrice
                     };
