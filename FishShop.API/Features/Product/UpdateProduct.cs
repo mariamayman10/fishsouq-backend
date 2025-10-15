@@ -111,16 +111,19 @@ public static class UpdateProduct
             // Update product sizes if provided
             if (request.Sizes != null)
             {
-                // Remove old sizes
+                // Remove all existing sizes
                 dbContext.ProductSizes.RemoveRange(product.Sizes);
+                await dbContext.SaveChangesAsync(cancellationToken); // << Important flush
 
-                // Add new ones
-                product.Sizes = request.Sizes.Select(s => new ProductSize
+                // Re-add updated sizes
+                var newSizes = request.Sizes.Select(s => new ProductSize
                 {
                     SizeName = s.Key,
                     Price = s.Value,
                     ProductId = product.Id
                 }).ToList();
+
+                product.Sizes = newSizes;
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
