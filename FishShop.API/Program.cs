@@ -28,6 +28,7 @@ builder.Services.AddCors(options =>
     );
 });
 
+Console.WriteLine($"🔍 DEBUG Connection String: {builder.Configuration.GetConnectionString("Database")}");
 
 var app = builder.Build();
 
