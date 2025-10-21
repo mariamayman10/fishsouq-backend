@@ -26,6 +26,7 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer()
             .AddSwagger()
             .AddTransient<IEmailSender<User>, EmailSender>()
+            .AddScoped<ICustomEmailService, CustomEmailService>()
             .AddDbContext<AppDbContext>(o => o.UseNpgsql(configuration.GetConnectionString("Database")))
             .AddMediatR(config => config.RegisterServicesFromAssembly(assembly))
             .AddCarter()

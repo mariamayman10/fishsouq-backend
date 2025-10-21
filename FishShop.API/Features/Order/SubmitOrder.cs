@@ -4,9 +4,11 @@ using FishShop.API.Contracts;
 using FishShop.API.Database;
 using FishShop.API.Entities;
 using FishShop.API.Entities.Enums;
+using FishShop.API.Infrastructure.Email;
 using FishShop.API.Shared;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -58,7 +60,7 @@ public static class SubmitOrder
         }
     }
 
-    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor)
+    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor, CustomEmailService emailSender)
         : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
@@ -145,6 +147,7 @@ public static class SubmitOrder
 
             dbContext.Orders.Add(order);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await emailSender.SendOrderNotificationAsync(userId, order.TotalPrice, "mariamayman3131@gmail.com");
 
             logger.LogInformation("Successfully submitted order {OrderId} for user {UserId}", order.Id, userId);
             return Result.Success(order.Id);
