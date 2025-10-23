@@ -2,6 +2,7 @@ using Carter;
 using FishShop.API.Extensions;
 using FishShop.API.Shared;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.AddCors(options =>
 Console.WriteLine($"🔍 DEBUG Connection String: {builder.Configuration.GetConnectionString("Database")}");
 
 var app = builder.Build();
+app.UseStaticFiles();
+
 
 // Enable CORS (place AFTER UseRouting but BEFORE UseAuthorization)
 app.UseCors("AllowAngularDev");

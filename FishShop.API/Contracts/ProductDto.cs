@@ -1,4 +1,6 @@
-﻿namespace FishShop.API.Contracts;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace FishShop.API.Contracts;
 
 public class ProductDto
 {
@@ -7,7 +9,7 @@ public class ProductDto
     public decimal Quantity { get; set; }
     public string? Description { get; set; }
     public string ImageUrl { get; set; }
-    public int TotalQuantitySold { get; set; }
+    public decimal TotalQuantitySold { get; set; }
     public decimal TotalRevenue { get; set; }
-    public List<ProductSizeDto>? Sizes { get; set; }
+    public List<ProductSizeDto>? Sizes { get; set; } = [];
 }

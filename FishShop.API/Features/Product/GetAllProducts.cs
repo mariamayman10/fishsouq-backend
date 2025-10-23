@@ -115,21 +115,49 @@ public static class GetAllProducts
                             LIMIT @PageSize OFFSET @PageNumber * @PageSize
                             """;
 
+            // STEP 1: Execute the search query
+            var products = await dbContext.Database.SqlQueryRaw<ProductDto>(rawQuery, queryParams)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
 
-            var query = dbContext.Database.SqlQueryRaw<ProductDto>(rawQuery, queryParams).IgnoreQueryFilters();
+            // STEP 2: Load sizes for all found products
+            var productIds = products.Select(p => p.Id).ToList();
 
-            var items = await query.AsNoTracking().ToListAsync(cancellationToken);
+            var sizes = await dbContext.ProductSizes
+                .Where(s => productIds.Contains(s.ProductId))
+                .Select(s => new
+                {
+                    s.ProductId,
+                    s.SizeName,
+                    s.Price
+                })
+                .ToListAsync(cancellationToken);
 
+            // STEP 3: Map sizes to each product
+            foreach (var product in products)
+            {
+                product.Sizes = sizes
+                    .Where(s => s.ProductId == product.Id)
+                    .Select(s => new ProductSizeDto
+                    {
+                        SizeName = s.SizeName,
+                        Price = s.Price
+                    })
+                    .ToList();
+            }
+
+            // STEP 4: Return paged result
             return new PagedResult<ProductDto>
             {
-                Items = items,
+                Items = products,
                 TotalItems = totalItems,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
         }
 
-        private async Task<PagedResult<ProductDto>> HandleWithoutSearch(Query request, CancellationToken cancellationToken)
+        private async Task<PagedResult<ProductDto>> HandleWithoutSearch(Query request,
+            CancellationToken cancellationToken)
         {
             var query = dbContext.Products.Include(p => p.ProductSales).AsQueryable();
 
@@ -141,7 +169,8 @@ public static class GetAllProducts
             query = request.OrderBy switch
             {
                 OrderBy.SalesAsc => query.OrderBy(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
-                OrderBy.SalesDesc or null => query.OrderByDescending(p => p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
+                OrderBy.SalesDesc or null => query.OrderByDescending(p =>
+                    p.ProductSales != null ? p.ProductSales.TotalQuantitySold : 0),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -174,7 +203,6 @@ public static class GetAllProducts
                 Page = request.Page,
                 PageSize = request.PageSize
             };
-
         }
     }
 }

@@ -60,7 +60,7 @@ public static class SubmitOrder
         }
     }
 
-    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor, CustomEmailService emailSender)
+    internal sealed class Handler(AppDbContext dbContext, ILogger<SubmitOrderEndpoint> logger, IHttpContextAccessor httpContextAccessor, ICustomEmailService emailSender)
         : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)

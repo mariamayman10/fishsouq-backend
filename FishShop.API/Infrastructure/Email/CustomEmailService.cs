@@ -61,10 +61,10 @@ public class CustomEmailService: ICustomEmailService
     {
         var mailMessage = new MailMessage
         {
-            From = new MailAddress(message.email, message.name),
-            Subject = message.subject,
+            From = new MailAddress(message.Email, message.Name),
+            Subject = message.Subject,
             IsBodyHtml = true,
-            Body = message.body + "\n UserName: " + message.name + " \n Phone Number: " + message.phone ,
+            Body = $"{message.Body}<br><br>UserName: {message.Name}<br>Phone Number: {message.Phone}",
         };
         mailMessage.To.Add("mariamayman3131@gmail.com");
 
@@ -178,7 +178,7 @@ public class CustomEmailService: ICustomEmailService
             <body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;'>
                 <div style='background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);'>
                     <div style='text-align: center; margin-bottom: 20px;'>
-                        <img src='https://fishsouq.vercel.app/assets/logo.png' alt='FishSouq Logo' style='width: 100px; height: auto;' />
+                        <img src='https://fishsouq.vercel.app/images/Logo.png' alt='FishSouq Logo' style='width: 100px; height: auto;' />
                     </div>
 
                     <h2 style='color: #333; text-align: center;'>📦 New Order Received</h2>
@@ -194,27 +194,10 @@ public class CustomEmailService: ICustomEmailService
 
                     <div style='background-color: #f0f8ff; border-left: 4px solid #007bff; padding: 15px; border-radius: 6px; margin: 20px 0;'>
                         <p style='margin: 0; color: #333; font-size: 16px;'>
-                            <strong>Order Total:</strong> {orderPrice:C}
+                            <strong>Order Total:</strong> EGP {orderPrice}
                         </p>
                     </div>
 
-                    <p style='color: #555; line-height: 1.6;'>
-                        Please review the order details in the admin dashboard.
-                    </p>
-
-                    <div style='text-align: center; margin: 30px 0;'>
-                        <a href='https://admin.fishsouq.com/orders' 
-                           style='display: inline-block;
-                                  padding: 12px 24px;
-                                  background-color: #007bff;
-                                  color: white;
-                                  text-decoration: none;
-                                  border-radius: 5px;
-                                  font-weight: bold;
-                                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-                            View Order
-                        </a>
-                    </div>
 
                     <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
 

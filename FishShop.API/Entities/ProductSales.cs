@@ -7,7 +7,7 @@ public class ProductSales
 {
     [Key] [ForeignKey("Product")] public int ProductId { get; init; }
 
-    public int TotalQuantitySold { get; set; }
+    public decimal TotalQuantitySold { get; set; }
     public decimal TotalRevenue { get; set; }
 
     public Product? Product { get; init; }

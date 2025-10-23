@@ -3,5 +3,5 @@
 public record CreateOrderItem
 {
     public int ProductSizeId { get; init; }
-    public int Quantity { get; init; }
+    public decimal Quantity { get; init; }
 }
