@@ -1,4 +1,5 @@
 using Carter;
+using FishShop.API.Contracts;
 using FishShop.API.Database;
 using FishShop.API.Entities;
 using FishShop.API.Shared;
@@ -7,6 +8,7 @@ using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Product = FishShop.API.Entities.Product;
 
 namespace FishShop.API.Features;
 
@@ -20,8 +22,7 @@ public static class AddProduct
         public required int CategoryId { get; set; }
         public required string ImageUrl { get; set; }
 
-        // new field: dictionary of sizeName => price
-        public required Dictionary<string, decimal> Sizes { get; set; }
+        public required List<ProductSizeDto>? Sizes { get; set; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -53,7 +54,7 @@ public static class AddProduct
                 .WithMessage("At least one size is required");
 
             RuleForEach(x => x.Sizes)
-                .Must(s => s.Value > 0)
+                .Must(s => s.Price > 0)
                 .WithMessage("Each size must have a positive price");
         }
     }
@@ -97,8 +98,8 @@ public static class AddProduct
             {
                 product.Sizes.Add(new ProductSize
                 {
-                    SizeName = size.Key,
-                    Price = size.Value,
+                    SizeName = size.SizeName,
+                    Price = size.Price,
                     Product = product
                 });
             }

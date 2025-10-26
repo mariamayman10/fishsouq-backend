@@ -1,4 +1,5 @@
 using Carter;
+using FishShop.API.Contracts;
 using FishShop.API.Database;
 using FishShop.API.Entities;
 using FishShop.API.Shared;
@@ -19,9 +20,7 @@ public static class UpdateProduct
         public int? Quantity { get; set; }
         public string? Description { get; set; }
         public int? CategoryId { get; set; }
-
-        // new: map of size name → price
-        public Dictionary<string, decimal>? Sizes { get; set; }
+        public List<ProductSizeDto>? Sizes { get; set; }
     }
 
     public class Validator : AbstractValidator<Command>
@@ -64,7 +63,7 @@ public static class UpdateProduct
             When(x => x.Sizes != null, () =>
             {
                 RuleForEach(x => x.Sizes!)
-                    .Must(s => s.Value > 0)
+                    .Must(s => s.Price > 0)
                     .WithMessage("Each size must have a positive price");
             });
         }
@@ -111,19 +110,46 @@ public static class UpdateProduct
             // Update product sizes if provided
             if (request.Sizes != null)
             {
-                // Remove all existing sizes
-                dbContext.ProductSizes.RemoveRange(product.Sizes);
-                await dbContext.SaveChangesAsync(cancellationToken); // << Important flush
-
-                // Re-add updated sizes
-                var newSizes = request.Sizes.Select(s => new ProductSize
+                foreach (var sizeDto in request.Sizes)
                 {
-                    SizeName = s.Key,
-                    Price = s.Value,
-                    ProductId = product.Id
-                }).ToList();
+                    // Case 1: Existing size -> update it
+                    if (sizeDto.Id != 0)
+                    {
+                        var existing = product.Sizes.FirstOrDefault(s => s.Id == sizeDto.Id);
+                        if (existing != null)
+                        {
+                            existing.SizeName = sizeDto.SizeName;
+                            existing.Price = sizeDto.Price;
+                        }
+                    }
+                    // Case 2: New size -> add it
+                    else
+                    {
+                        product.Sizes.Add(new ProductSize
+                        {
+                            SizeName = sizeDto.SizeName,
+                            Price = sizeDto.Price,
+                            ProductId = product.Id
+                        });
+                    }
+                }
+                logger.LogInformation("updated");
 
-                product.Sizes = newSizes;
+                // // Case 3: Removed sizes -> delete them
+                var incomingIds = request.Sizes
+                    .Where(s => s.Id != 0)
+                    .Select(s => s.Id)
+                    .ToList();
+                logger.LogInformation("updated ${i}", incomingIds.Count);
+                
+                
+                var removed = product.Sizes
+                    .Where(s => s.Id != 0 && !incomingIds.Contains(s.Id))
+                    .ToList();
+                logger.LogInformation("updated ${r}", removed.Count);
+                
+                
+                dbContext.ProductSizes.RemoveRange(removed);
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);

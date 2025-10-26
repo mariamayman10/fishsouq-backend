@@ -178,7 +178,7 @@ public class CustomEmailService: ICustomEmailService
             <body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;'>
                 <div style='background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);'>
                     <div style='text-align: center; margin-bottom: 20px;'>
-                        <img src='https://fishsouq.vercel.app/images/Logo.png' alt='FishSouq Logo' style='width: 100px; height: auto;' />
+                        <img src='https://fishsouq.runasp.net/images/Logo.png' alt='FishSouq Logo' style='width: 100px; height: auto;' />
                     </div>
 
                     <h2 style='color: #333; text-align: center;'>📦 New Order Received</h2>

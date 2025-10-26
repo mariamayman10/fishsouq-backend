@@ -77,6 +77,7 @@ public static class GetProducts
 
             if (request.CategoryId.HasValue)
                 q = q.Where(p => p.CategoryId == request.CategoryId.Value);
+            else q = q.Where(p => p.CategoryId != 5);
 
             // apply search (case-insensitive, Postgres ILIKE)
             var search = request.SearchText?.Trim();
@@ -130,8 +131,8 @@ public static class GetProducts
 
             if (request.CategoryId.HasValue)
                 query = query.Where(p => p.CategoryId == request.CategoryId.Value);
-            query.Include(p => p.Sizes);
-
+            else query = query.Where(p => p.CategoryId != 5);
+            
             var totalItems = await query.CountAsync(cancellationToken);
 
             var items = await query

@@ -8,6 +8,6 @@ public class OrderProduct
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
 
-    public Order Order { get; set; } = null!;
-    public ProductSize ProductSize { get; set; } = null!;
+    public Order Order { get; set; }
+    public ProductSize ProductSize { get; set; }
 }

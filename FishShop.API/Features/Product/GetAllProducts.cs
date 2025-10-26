@@ -66,87 +66,96 @@ public static class GetAllProducts
         {
             var orderByString = request.OrderBy switch
             {
-                OrderBy.PriceAsc => ", p.\"Price\" ASC",
-                OrderBy.PriceDesc => ", p.\"Price\" DESC",
-                OrderBy.SalesAsc => ", ps.\"TotalQuantitySold\" ASC",
-                OrderBy.SalesDesc or null => ", ps.\"TotalQuantitySold\" DESC",
-                OrderBy.AvQuantityAsc => ", p.\"Quantity\" ASC",
-                OrderBy.AvQuantityDesc => ", p.\"Quantity\" DESC",
-                _ => throw new ArgumentOutOfRangeException()
+                OrderBy.PriceAsc => "ORDER BY MIN(s.\"Price\") ASC",
+                OrderBy.PriceDesc => "ORDER BY MAX(s.\"Price\") DESC",
+                OrderBy.SalesAsc => "ORDER BY ps.\"TotalQuantitySold\" ASC",
+                OrderBy.SalesDesc or null => "ORDER BY ps.\"TotalQuantitySold\" DESC",
+                OrderBy.AvQuantityAsc => "ORDER BY p.\"Quantity\" ASC",
+                OrderBy.AvQuantityDesc => "ORDER BY p.\"Quantity\" DESC",
+                _ => "ORDER BY similarity(p.\"Name\", @searchTerm) DESC"
             };
+
+            var categoryCondition = request.CategoryId.HasValue
+                ? $"AND p.\"CategoryId\" = {request.CategoryId}"
+                : string.Empty;
 
             object[] queryParams =
             [
-                new NpgsqlParameter("searchTerm", request.SearchText),
+                new NpgsqlParameter("searchTerm", request.SearchText ?? string.Empty),
                 new NpgsqlParameter("pageSize", request.PageSize),
                 new NpgsqlParameter("pageNumber", request.Page - 1)
             ];
 
-            var categoryCondition =
-                request.CategoryId.HasValue ? $"AND \"CategoryId\" = {request.CategoryId}" : string.Empty;
-
+            // Count total items for pagination
             var countQuery = $"""
-                              SELECT COUNT(1) AS "Value"
-                              FROM "Products" AS p
-                              LEFT JOIN "ProductSales" AS ps ON p."Id" = ps."ProductId"
-                              WHERE p."IsDeleted" = FALSE
-                                {categoryCondition}
-                                AND (similarity(p."Name", @searchTerm) >= 0.3 OR p."Name" ILIKE '%' || @searchTerm || '%')
+                                  SELECT COUNT(DISTINCT p."Id") AS "Value"
+                                  FROM "Products" p
+                                  WHERE p."IsDeleted" = FALSE
+                                  {categoryCondition}
+                                  AND (
+                                      similarity(p."Name", @searchTerm) >= 0.3 
+                                      OR p."Name" ILIKE '%' || @searchTerm || '%'
+                                  )
                               """;
 
-            var totalItems = await dbContext.Database.SqlQueryRaw<int>(countQuery, queryParams)
+            var totalItems = await dbContext.Database
+                .SqlQueryRaw<int>(countQuery, queryParams)
                 .FirstAsync(cancellationToken);
 
+            // Flattened query with join for sizes
             var rawQuery = $"""
-                            SELECT 
-                                p."Id", 
-                                p."Quantity", 
-                                p."Name", 
-                                p."Description",
-                                p."ImageUrl",
-                                COALESCE(ps."TotalQuantitySold", 0) AS "TotalQuantitySold",
-                                COALESCE(ps."TotalRevenue", 0) AS "TotalRevenue"
-                            FROM "Products" AS p
-                            LEFT JOIN "ProductSales" AS ps ON p."Id" = ps."ProductId"
-                            WHERE p."IsDeleted" = FALSE
-                              {categoryCondition}
-                              AND (similarity(p."Name", @searchTerm) >= 0.3 OR p."Name" ILIKE '%' || @searchTerm || '%')
-                            ORDER BY similarity(p."Name", @searchTerm) DESC {orderByString}
-                            LIMIT @PageSize OFFSET @PageNumber * @PageSize
+                                SELECT 
+                                    p."Id" AS "ProductId",
+                                    p."Name",
+                                    p."Description",
+                                    p."ImageUrl",
+                                    p."Quantity",
+                                    COALESCE(ps."TotalQuantitySold", 0) AS "TotalQuantitySold",
+                                    COALESCE(ps."TotalRevenue", 0) AS "TotalRevenue",
+                                    s."SizeName",
+                                    s."Price"
+                                FROM "Products" p
+                                LEFT JOIN "ProductSales" ps ON ps."ProductId" = p."Id"
+                                LEFT JOIN "ProductSizes" s ON s."ProductId" = p."Id"
+                                WHERE p."IsDeleted" = FALSE
+                                {categoryCondition}
+                                AND (
+                                    similarity(p."Name", @searchTerm) >= 0.3 
+                                    OR p."Name" ILIKE '%' || @searchTerm || '%'
+                                )
+                                {orderByString}
+                                LIMIT @pageSize OFFSET @pageNumber * @pageSize;
                             """;
 
-            // STEP 1: Execute the search query
-            var products = await dbContext.Database.SqlQueryRaw<ProductDto>(rawQuery, queryParams)
+            // Execute SQL
+            var flatList = await dbContext.Database
+                .SqlQueryRaw<ProductFlatDto>(rawQuery, queryParams)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
-            // STEP 2: Load sizes for all found products
-            var productIds = products.Select(p => p.Id).ToList();
-
-            var sizes = await dbContext.ProductSizes
-                .Where(s => productIds.Contains(s.ProductId))
-                .Select(s => new
+            // Group results by ProductId
+            var products = flatList
+                .GroupBy(p => p.ProductId)
+                .Select(g => new ProductDto
                 {
-                    s.ProductId,
-                    s.SizeName,
-                    s.Price
+                    Id = g.Key,
+                    Name = g.First().Name,
+                    Description = g.First().Description,
+                    ImageUrl = g.First().ImageUrl,
+                    Quantity = g.First().Quantity,
+                    TotalRevenue = g.First().TotalRevenue,
+                    TotalQuantitySold = g.First().TotalQuantitySold,
+                    Sizes = g
+                        .Where(x => x.SizeName != null)
+                        .Select(x => new ProductSizeDto
+                        {
+                            SizeName = x.SizeName!,
+                            Price = x.Price ?? 0
+                        })
+                        .ToList()
                 })
-                .ToListAsync(cancellationToken);
+                .ToList();
 
-            // STEP 3: Map sizes to each product
-            foreach (var product in products)
-            {
-                product.Sizes = sizes
-                    .Where(s => s.ProductId == product.Id)
-                    .Select(s => new ProductSizeDto
-                    {
-                        SizeName = s.SizeName,
-                        Price = s.Price
-                    })
-                    .ToList();
-            }
-
-            // STEP 4: Return paged result
             return new PagedResult<ProductDto>
             {
                 Items = products,
