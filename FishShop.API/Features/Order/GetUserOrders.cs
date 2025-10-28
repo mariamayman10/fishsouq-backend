@@ -86,6 +86,7 @@ public static class GetUserOrders
             }
 
             var items = await query
+                .AsNoTracking()
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .Select(o => new OrderOverview
@@ -95,7 +96,7 @@ public static class GetUserOrders
                     TotalPrice = o.TotalPrice,
                     Status = o.Status,
                     DeliveryType = o.DeliveryType,
-                    DeliveryAddress = o.Address,
+                    DeliveryAddress = o.Address ?? null,
                     Products = o.OrderProducts.Count
                 })
                 .ToListAsync(cancellationToken);

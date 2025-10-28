@@ -66,7 +66,7 @@ public class CustomEmailService: ICustomEmailService
             IsBodyHtml = true,
             Body = $"{message.Body}<br><br>UserName: {message.Name}<br>Phone Number: {message.Phone}",
         };
-        mailMessage.To.Add("mariamayman3131@gmail.com");
+        mailMessage.To.Add("magfnb@gmail.com");
 
         await _smtpClient.SendMailAsync(mailMessage);
     }

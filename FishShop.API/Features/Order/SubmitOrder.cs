@@ -147,7 +147,7 @@ public static class SubmitOrder
 
             dbContext.Orders.Add(order);
             await dbContext.SaveChangesAsync(cancellationToken);
-            await emailSender.SendOrderNotificationAsync(userId, order.TotalPrice, "mariamayman3131@gmail.com");
+            await emailSender.SendOrderNotificationAsync(userId, order.TotalPrice, "magfnb@gmail.com");
 
             logger.LogInformation("Successfully submitted order {OrderId} for user {UserId}", order.Id, userId);
             return Result.Success(order.Id);

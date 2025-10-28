@@ -16,7 +16,7 @@ public static class SendEmail
         public async Task Handle(Query request, CancellationToken ct)
         {
             await EmailSender.SendMessageAsync(request.Message);
-            Logger.LogInformation("Email sent successfully to {Email} from {senderEmail}", "mariamayman3131@gmail.com",
+            Logger.LogInformation("Email sent successfully to {Email} from {senderEmail}", "magfnb@gmail.com",
                 request.Message.Email);
         }
     }
