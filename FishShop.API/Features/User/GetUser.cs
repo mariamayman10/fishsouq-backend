@@ -55,7 +55,7 @@ public static class GetUser
                 result.Orders = user.Orders.Select(o => new OrderDetails
                 {
                     Id = o.Id,
-                    AddressId = o.AddressId,
+                    Address = o.Address,
                     Status = o.Status,
                     CreatedAt = o.CreatedAt,
                     TotalAmount = o.TotalPrice,

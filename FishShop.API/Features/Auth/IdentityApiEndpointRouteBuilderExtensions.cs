@@ -102,6 +102,16 @@ public static class IdentityApiEndpointRouteBuilderExtensions
                 claims.Add(new Claim(ClaimsConstants.AgeClaim, registration.Age.Value.ToString()));
             }
 
+            if (registration.Governorate is not null)
+            {                
+                claims.Add(new Claim(ClaimsConstants.GovernorateClaim, registration.Governorate));
+            }
+            
+            if (registration.Area is not null)
+            {                
+                claims.Add(new Claim(ClaimsConstants.AreaClaim, registration.Area));
+            }
+
             var result = await userManager.CreateAsync(user, registration.Password);
 
             if (!result.Succeeded) return CreateValidationProblem(result);

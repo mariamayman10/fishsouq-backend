@@ -41,4 +41,6 @@ public static class ClaimsConstants
 {
     public const string AgeClaim = "Age";
     public const string JoinDateClaim = "JoinDate";
+    public const string GovernorateClaim = "Governorate";
+    public const string AreaClaim = "Area";
 }

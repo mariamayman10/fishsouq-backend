@@ -14,6 +14,6 @@ public record OrderOverview
     public OrderStatus Status { get; init; }
     public DateTime DeliveryDate { get; set; }
     public DeliveryType DeliveryType { get; set; }
-    public string DeliveryAddress { get; init; }
+    public Address DeliveryAddress { get; init; }
     public int Products { get; set; }
 }

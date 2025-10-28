@@ -1,4 +1,5 @@
-﻿using FishShop.API.Entities.Enums;
+﻿using FishShop.API.Contracts;
+using FishShop.API.Entities.Enums;
 
 namespace FishShop.API.Entities;
 
@@ -10,15 +11,15 @@ public class Order
     public decimal TotalPrice { get; init; }
     public int DeliveryFees { get; set; }
     public decimal Discount { get; set; }
-    public string PromoCode { get; set; }
+    public string? PromoCode { get; set; }
     public DateTime DeliveryDate { get; set; }
     public OrderStatus Status { get; set; }
     public DeliveryType DeliveryType { get; init; }
     public string? UserId { get; init; }
-    public string AddressId { get; init; }
+    public Address? Address { get; init; }
     public User? User { get; init; }
     public string? PaymentInfo { get; set; }
 
 
-    public ICollection<OrderProduct>? OrderProducts { get; init; }
+    public required ICollection<OrderProduct> OrderProducts { get; init; }
 }

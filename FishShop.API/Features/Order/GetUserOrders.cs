@@ -95,7 +95,7 @@ public static class GetUserOrders
                     TotalPrice = o.TotalPrice,
                     Status = o.Status,
                     DeliveryType = o.DeliveryType,
-                    DeliveryAddress = o.AddressId,
+                    DeliveryAddress = o.Address,
                     Products = o.OrderProducts.Count
                 })
                 .ToListAsync(cancellationToken);

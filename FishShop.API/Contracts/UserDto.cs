@@ -11,6 +11,8 @@ public class UserDto
     public string Role { get; set; }
     public int OrdersCount { get; set; }
     public string PhoneNumber { get; set; }
+    public string Governorate { get; set; }
+    public string Area  { get; set; }
     public AdminPrivilegesDto? Privileges { get; set; }
 
 

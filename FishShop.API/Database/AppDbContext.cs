@@ -20,7 +20,6 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<OrderProduct> OrderProducts { get; init; }
     public DbSet<ProductSales> ProductSales { get; init; }
     public DbSet<RefreshToken> RefreshTokens { get; init; }
-    public DbSet<UserAddress> UserAddresses { get; init; }
     public DbSet<AdminPrivileges> AdminPrivileges { get; init; }
     public DbSet<PromoCode> PromoCodes { get; init; }
     public DbSet<ProductSize> ProductSizes { get; set; }
@@ -36,7 +35,6 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
         modelBuilder.ApplyConfiguration(new OrderProductConfiguration());
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
-        modelBuilder.ApplyConfiguration(new UserAddressConfiguration());
         modelBuilder.ApplyConfiguration(new AdminPrivilegesConfiguration());
         modelBuilder.ApplyConfiguration(new PromoCodeConfiguration());
         modelBuilder.ApplyConfiguration(new ProductSizeConfiguration());

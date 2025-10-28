@@ -68,7 +68,7 @@ public static class GetOrderDetails
             var orderDetails = new OrderDetails
             {
                 Id = order.Id,
-                AddressId = order.AddressId,
+                Address = order.Address,
                 TotalAmount = order.OrderProducts.Sum(p => p.UnitPrice * p.Quantity),
                 UserName = order.User?.UserName ?? "",
                 UserId = order.UserId,

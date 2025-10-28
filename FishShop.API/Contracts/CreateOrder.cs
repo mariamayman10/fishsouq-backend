@@ -13,6 +13,6 @@ public record CreateOrder
     public decimal Discount { get; init; }
     public string PromoCode { get; init; }
     public List<CreateOrderItem>? Items { get; set; }
-    public string? AddressId { get; init; }
+    public Address? Address { get; init; }
     public string? PaymentInfo {get; init; }
 }

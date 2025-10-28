@@ -21,7 +21,7 @@ public static class SubmitOrder
         public string? UserId { get; init; }
         public List<CreateOrderItem>? Items { get; init; }
         public DeliveryType DeliveryType { get; init; }
-        public string? AddressId { get; init; }
+        public Address? Address { get; init; }
         public string? PaymentInfo { get; init; }
         public decimal Discount { get; init; }
         public int DeliveryFees { get; init; }
@@ -32,8 +32,8 @@ public static class SubmitOrder
     {
         public Validator()
         {
-            RuleFor(x => x.AddressId)
-                .NotEmpty()
+            RuleFor(x => x.Address)
+                .NotNull()
                 .When(x => x.DeliveryType != DeliveryType.PickUp)
                 .WithMessage("Address ID is required when delivery type is not office pickup");
 
@@ -128,7 +128,7 @@ public static class SubmitOrder
             var order = new Order
             {
                 UserId = userId,
-                AddressId = request.AddressId ?? "",
+                Address = request.Address ?? null,
                 CreatedAt = DateTime.UtcNow,
                 DeliveryType = request.DeliveryType,
                 DeliveryFees = request.DeliveryFees,
@@ -136,7 +136,7 @@ public static class SubmitOrder
                 TotalPrice = totalPrice + request.DeliveryFees - request.Discount,
                 Status = OrderStatus.Pending,
                 PaymentInfo = request.PaymentInfo,
-                PromoCode = request.PromoCode,
+                PromoCode = request.PromoCode ?? "",
                 OrderProducts = request.Items.Select(i => new OrderProduct
                 {
                     ProductSizeId = i.ProductSizeId,
@@ -175,7 +175,7 @@ public class SubmitOrderEndpoint : ICarterModule
                 var command = new SubmitOrder.Command
                 {
                     UserId = userId,
-                    AddressId = request.AddressId,
+                    Address = request.Address,
                     Items = request.Items,
                     DeliveryType = request.DeliveryType,
                     PaymentInfo = request.PaymentInfo,

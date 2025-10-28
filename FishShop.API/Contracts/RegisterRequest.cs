@@ -10,4 +10,6 @@ public record RegisterRequest
     public required string Name { get; set; }
     public Gender? Gender { get; set; }
     public int? Age { get; set; }
+    public string? Governorate { get; init; }
+    public string? Area { get; init; }
 }
